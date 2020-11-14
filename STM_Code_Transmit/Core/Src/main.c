@@ -50,7 +50,7 @@
 
 /* USER CODE BEGIN PV */
 uint8_t position_buffer[4];
-uint8_t receive_buffer[1];
+uint8_t receive_buffer[4];
 /*
  * Byte 0: x decimal
  * 		1: x fraction
@@ -111,7 +111,7 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart2, receive_buffer, sizeof(receive_buffer));
-	// runRadio();
+	runRadio();
   /* USER CODE END 2 */
 
   /* Infinite loop */ 
@@ -170,7 +170,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   if(huart->Instance == huart2.Instance)
   {
     HAL_UART_Receive_IT(&huart2, receive_buffer, sizeof(receive_buffer));
-    UART_SendStr((char*)receive_buffer);
+    UART_SendBufHex((char*)receive_buffer, sizeof(receive_buffer));
   }
 }
 

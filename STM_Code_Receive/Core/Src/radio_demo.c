@@ -77,7 +77,7 @@ void UART_SendInt(int32_t num)
         UART_SendChar(str[i]);
 }
 
-uint8_t nRF24_payload[32];
+uint8_t nRF24_payload[4];
 
 // Pipe number
 nRF24_RXResult pipe;
@@ -860,7 +860,7 @@ int runRadio(void)
 			UART_SendStr("Received: ");
 			// UART_SendInt(pipe);
 			// UART_SendStr(" PAYLOAD:>");
-			UART_SendStr((char *) nRF24_payload);
+			UART_SendBufHex((char *) nRF24_payload, sizeof(nRF24_payload));
 			UART_SendStr("\r\n");
     	}
     }
