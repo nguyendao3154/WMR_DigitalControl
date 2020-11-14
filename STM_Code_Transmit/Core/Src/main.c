@@ -50,6 +50,7 @@
 
 /* USER CODE BEGIN PV */
 uint8_t position_buffer[4];
+uint8_t receive_buffer[1];
 /*
  * Byte 0: x decimal
  * 		1: x fraction
@@ -109,10 +110,11 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-	runRadio();
+  HAL_UART_Receive_IT(&huart2, receive_buffer, sizeof(receive_buffer));
+	// runRadio();
   /* USER CODE END 2 */
 
-  /* Infinite loop */
+  /* Infinite loop */ 
   /* USER CODE BEGIN WHILE */
   while (1)
   {
@@ -163,6 +165,15 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if(huart->Instance == huart2.Instance)
+  {
+    HAL_UART_Receive_IT(&huart2, receive_buffer, sizeof(receive_buffer));
+    UART_SendStr((char*)receive_buffer);
+  }
+}
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 }
