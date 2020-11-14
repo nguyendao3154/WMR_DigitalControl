@@ -1013,9 +1013,9 @@ int runRadio(void) {
     	// }
 		payload_length = sizeof(nRF24_payload);
     	// Print a payload
-    	UART_SendStr("PAYLOAD:>");
-    	UART_SendBufHex((char *)nRF24_payload, payload_length);
-    	UART_SendStr("< ... TX: ");
+    	UART_SendStr("Sent: ");
+    	UART_SendStr((char *)nRF24_payload);
+    	// UART_SendStr("< ... TX: ");
 
     	// Transmit a packet
     	tx_res = nRF24_TransmitPacket(nRF24_payload, payload_length);
@@ -1039,12 +1039,12 @@ int runRadio(void) {
 				UART_SendStr("ERROR");
 				break;
 		}
-		UART_SendStr("   ACK_PAYLOAD=>");
-    	UART_SendBufHex((char *) nRF24_payload, payload_length);
-    	UART_SendStr("<   ARC=");
-		UART_SendInt(otx_arc_cnt);
-		UART_SendStr(" LOST=");
-		UART_SendInt(packets_lost);
+		// UART_SendStr("   ACK_PAYLOAD=>");
+    	// UART_SendBufHex((char *) nRF24_payload, payload_length);
+    	// UART_SendStr("<   ARC=");
+		// UART_SendInt(otx_arc_cnt);
+		// UART_SendStr(" LOST=");
+		// UART_SendInt(packets_lost);
 		UART_SendStr("\r\n");
 
     	// Wait ~0.5s

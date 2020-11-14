@@ -844,34 +844,25 @@ int runRadio(void)
     while (1)
     {
         //
-        // Constantly poll the status of the RX FIFO and get a payload if FIFO is not empty
-        //
-        // This is far from best solution, but it's ok for testing purposes
-        // More smart way is to use the IRQ pin :)
-        //
-        if (nRF24_GetStatus_RXFIFO() != nRF24_STATUS_RXFIFO_EMPTY)
-        {
-            
-            // Get a payload from the transceiver
-            pipe = nRF24_ReadPayloadDpl(nRF24_payload, &payload_length);
-            if(nRF24_payload[0] != '\0')
-            if (payload_length > 0)
-            {
-                nRF24_WriteAckPayload(pipe, "aCk PaYlOaD", 11);
-            }
+    	// Constantly poll the status of the RX FIFO and get a payload if FIFO is not empty
+    	//
+    	// This is far from best solution, but it's ok for testing purposes
+    	// More smart way is to use the IRQ pin :)
+    	//
+    	if (nRF24_GetStatus_RXFIFO() != nRF24_STATUS_RXFIFO_EMPTY) {
+    		// Get a payload from the transceiver
+    		pipe = nRF24_ReadPayload(nRF24_payload, &payload_length);
 
-            // Clear all pending IRQ flags
-            nRF24_ClearIRQFlags();
+    		// Clear all pending IRQ flags
+			nRF24_ClearIRQFlags();
 
-            // Print a payload contents to UART
-            // UART_SendStr("RCV PIPE#");
-            // UART_SendInt(pipe);
-            // UART_SendStr(" PAYLOAD:>");
-            
-            UART_SendBufHex((char *)nRF24_payload, payload_length);
-            UART_SendStr("\r\n");
-        }
-        // Delay_ms(500);
+			// Print a payload contents to UART
+			UART_SendStr("Received: ");
+			// UART_SendInt(pipe);
+			// UART_SendStr(" PAYLOAD:>");
+			UART_SendStr((char *) nRF24_payload);
+			UART_SendStr("\r\n");
+    	}
     }
 #pragma clang diagnostic pop
 
