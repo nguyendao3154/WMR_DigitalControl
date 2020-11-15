@@ -1,22 +1,17 @@
 STM_Code_Transmit/Debug/
-STM_Code_Receive/MDK-ARM/STM_WMR_Ver1/
 STM_Code_Transmit/MDK-ARM/STM_WMR_Ver1/
 CodeArduino/
 STM_Code_Receive/Debug/
-STM_Code_Receive/MDK-ARM/
 *.launch
 STM_Code_Transmit/MDK-ARM/
 STM_Code_Transmit/.settings/
 STM_Code_Receive/.settings/language.settings.xml
-STM_Code_Receive/.project
-STM_Code_Receive/.mxproject
-STM_Code_Receive/.cproject
 STM_Code_Transmit/STM_WMR_Ver1.ioc
 STM_Code_Transmit/STM_WMR_Ver1 Debug.cfg
 STM_Code_Transmit/STM32F103C8TX_FLASH.ld
-STM_Code_Transmit/.project
-STM_Code_Transmit/.mxproject
-STM_Code_Transmit/.cproject
-STM_Code_Receive/STM_WMR_Ver1.ioc
 STM_Code_Receive/STM_WMR_Ver1 Debug.cfg
 STM_Code_Receive/STM32F103C8TX_FLASH.ld
+STM_Code_Receive/MDK-ARM/STM_WMR_Ver1/nrf24.d
+STM_Code_Receive/MDK-ARM/STM_WMR_Ver1/
+STM_Code_Receive/MDK-ARM/
+STM_Code_Receive.rar
