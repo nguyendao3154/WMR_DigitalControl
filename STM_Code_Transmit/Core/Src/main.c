@@ -28,7 +28,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "nrf24.h"
-#include "mpu6050.h"
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,6 +61,9 @@ uint8_t receive_buffer[4];
 float x_pos, y_pos;											//feedback position from RF
 uint16_t right_wheel_count = 0, left_wheel_count = 0;		//use to count encoder of 2 wheels
 float right_speed, left_speed;
+uint16_t count_tick = 0;
+
+bool timer2_flag = false;
 
 /* USER CODE END PV */
 
@@ -68,6 +71,7 @@ float right_speed, left_speed;
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void PWM_ChangeDuty(TIM_HandleTypeDef* htim, uint8_t duty);			//only used for TIM3 and TIM4 to control motor
+void task_100ms(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -111,6 +115,7 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart2, receive_buffer, sizeof(receive_buffer));
+	HAL_TIM_Base_Start_IT(&htim2);
 	runRadio();
   /* USER CODE END 2 */
 
@@ -119,6 +124,7 @@ int main(void)
   while (1)
   {
 	  //uint8_t data = 'a';
+		task_100ms();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -174,6 +180,20 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   }
 }
 
+void task_100ms(void)
+{
+	if(timer2_flag)
+	{
+		if(count_tick >= 10)
+		{
+			//UART_SendStr("in timer ");
+			transmitRF();
+			count_tick = 0;
+		}
+	}
+	timer2_flag = false;
+}
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 }
@@ -187,15 +207,12 @@ void PWM_ChangeDuty(TIM_HandleTypeDef* htim, uint8_t duty) {
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {		//measure pulse of encoder timeout
-	if(htim->Instance == TIM2) {
-		//measure in 1ms
-		right_speed = (float)right_wheel_count * 50;	//count * time / PPR (round/s)
-		left_speed = (float)left_wheel_count * 50;
-		right_wheel_count = 0;
-		left_wheel_count = 0;
-
-		htim2.Instance->CNT = 0x00;					//set counter = 0 to restart
-		HAL_TIM_Base_Start_IT(&htim2);
+	if(htim->Instance == TIM2) 
+		{
+		
+		timer2_flag = true;
+		//htim2.Instance->CNT = 0x00;					//set counter = 0 to restart
+		count_tick++;
 	}
 }
 /* USER CODE END 4 */

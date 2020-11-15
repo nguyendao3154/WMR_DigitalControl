@@ -64,7 +64,6 @@ uint16_t right_wheel_count = 0, left_wheel_count = 0;		//use to count encoder of
 uint16_t count_tick = 0;
 
 bool timer2_flag = false;
-bool timer1_flag = false;
 
 
 

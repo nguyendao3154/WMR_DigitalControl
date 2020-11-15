@@ -14,6 +14,8 @@ extern uint8_t receive_buffer[4];
 
 uint8_t nRF24_payload[4];
 
+void transmitRF(void);
+	
 void UART_SendChar(char b)
 {
 	HAL_UART_Transmit(&huart2, (uint8_t *)&b, 1, 200);
@@ -83,6 +85,12 @@ void UART_SendInt(int32_t num)
 nRF24_RXResult pipe;
 
 uint32_t i, j, k;
+
+// Some variables
+	uint32_t packets_lost = 0; // global counter of lost packets
+	uint8_t otx;
+	uint8_t otx_plos_cnt; // lost packet count
+	uint8_t otx_arc_cnt;  // retransmit count
 
 // Length of received payload
 uint8_t payload_length;
@@ -190,6 +198,56 @@ nRF24_TXResult nRF24_TransmitPacket(uint8_t *pBuf, uint8_t length)
 
 #endif // DEMO_TX_
 
+void transmitRF(void)
+{
+	// payload_length = (uint8_t)(2 + (j + j /10)% 7);
+
+		// // Prepare data packet
+		// for (i = 0; i < payload_length; i++) {
+		// 	nRF24_payload[i] = (uint8_t) j++;
+		// 	if (j > 0x000000FF) j = 0;
+		// }
+		for (i = 0; i < 4; i++)
+		{
+			nRF24_payload[i] = receive_buffer[i];
+		}
+		payload_length = sizeof(nRF24_payload);
+		// Print a payload
+		UART_SendStr("Sent: ");
+		UART_SendBufHex((char *)nRF24_payload, payload_length);
+		// UART_SendStr("< ... TX: ");
+
+		// Transmit a packet
+		tx_res = nRF24_TransmitPacket(nRF24_payload, payload_length);
+		otx = nRF24_GetRetransmitCounters();
+		nRF24_ReadPayloadDpl(nRF24_payload, &payload_length);
+		otx_plos_cnt = (otx & nRF24_MASK_PLOS_CNT) >> 4; // packets lost counter
+		otx_arc_cnt = (otx & nRF24_MASK_ARC_CNT);		 // auto retransmissions counter
+		switch (tx_res)
+		{
+		case nRF24_TX_SUCCESS:
+			UART_SendStr("OK");
+			break;
+		case nRF24_TX_TIMEOUT:
+			UART_SendStr("TIMEOUT");
+			break;
+		case nRF24_TX_MAXRT:
+			UART_SendStr("MAX RETRANSMIT");
+			packets_lost += otx_plos_cnt;
+			nRF24_ResetPLOS();
+			break;
+		default:
+			UART_SendStr("ERROR");
+			break;
+		}
+		// UART_SendStr("   ACK_PAYLOAD=>");
+		// UART_SendBufHex((char *) nRF24_payload, payload_length);
+		// UART_SendStr("<   ARC=");
+		// UART_SendInt(otx_arc_cnt);
+		// UART_SendStr(" LOST=");
+		// UART_SendInt(packets_lost);
+		UART_SendStr("\r\n");
+}
 int runRadio(void)
 {
 	UART_SendStr("\r\nSTM32L432KC is online.\r\n");
@@ -1026,72 +1084,14 @@ int runRadio(void)
 	// Wake the transceiver
 	nRF24_SetPowerMode(nRF24_PWR_UP);
 
-	// Some variables
-	uint32_t packets_lost = 0; // global counter of lost packets
-	uint8_t otx;
-	uint8_t otx_plos_cnt; // lost packet count
-	uint8_t otx_arc_cnt;  // retransmit count
+	
 
 	// The main loop
 	j = 0;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 
-	while (1)
-	{
-#pragma clang diagnostic pop
-
-		// payload_length = (uint8_t)(2 + (j + j /10)% 7);
-
-		// // Prepare data packet
-		// for (i = 0; i < payload_length; i++) {
-		// 	nRF24_payload[i] = (uint8_t) j++;
-		// 	if (j > 0x000000FF) j = 0;
-		// }
-		for (i = 0; i < 4; i++)
-		{
-			nRF24_payload[i] = receive_buffer[i];
-		}
-		payload_length = sizeof(nRF24_payload);
-		// Print a payload
-		UART_SendStr("Sent: ");
-		UART_SendBufHex((char *)nRF24_payload, payload_length);
-		// UART_SendStr("< ... TX: ");
-
-		// Transmit a packet
-		tx_res = nRF24_TransmitPacket(nRF24_payload, payload_length);
-		otx = nRF24_GetRetransmitCounters();
-		nRF24_ReadPayloadDpl(nRF24_payload, &payload_length);
-		otx_plos_cnt = (otx & nRF24_MASK_PLOS_CNT) >> 4; // packets lost counter
-		otx_arc_cnt = (otx & nRF24_MASK_ARC_CNT);		 // auto retransmissions counter
-		switch (tx_res)
-		{
-		case nRF24_TX_SUCCESS:
-			UART_SendStr("OK");
-			break;
-		case nRF24_TX_TIMEOUT:
-			UART_SendStr("TIMEOUT");
-			break;
-		case nRF24_TX_MAXRT:
-			UART_SendStr("MAX RETRANSMIT");
-			packets_lost += otx_plos_cnt;
-			nRF24_ResetPLOS();
-			break;
-		default:
-			UART_SendStr("ERROR");
-			break;
-		}
-		// UART_SendStr("   ACK_PAYLOAD=>");
-		// UART_SendBufHex((char *) nRF24_payload, payload_length);
-		// UART_SendStr("<   ARC=");
-		// UART_SendInt(otx_arc_cnt);
-		// UART_SendStr(" LOST=");
-		// UART_SendInt(packets_lost);
-		UART_SendStr("\r\n");
-
-		// Wait ~0.5s
-		Delay_ms(500);
-	}
 
 #endif // DEMO_RX_ESB_ACK_PL
+
 }
