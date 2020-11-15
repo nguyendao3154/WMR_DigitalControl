@@ -66,6 +66,8 @@ bool htim2_check = 0;
 
 uint32_t g_systick= 0;
 
+bool new_measure = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -125,7 +127,34 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  //uint8_t data = 'a';
+		//check position, calculate feedback value
+		float x_fb;
+		float y_fb;
+		float phi_fb;
+		
+		//Set parameter for control motor
+		float v_ref, w_ref;									//output of kinematic control
+		float v_measure = PID_MeasureVelocity(left_speed, right_speed);
+		float w_measure = PID_MeasureRotation(left_speed, right_speed);
+		
+		float left_torque, right_torque;		
+		float v_error = 0, w_error = 0;			//used for Compensator	
+		//motor control:
+		PID_KinematicControl(x_fb, y_fb, phi_fb, &v_ref, &w_ref);
+		PID_DynamicInverse(v_ref, w_ref, v_measure, w_measure, &left_torque, &right_torque);
+		for(uint8_t i = 0; i < 10; i++) {
+			float delta_r, delta_l;								//output of compensator
+			uint8_t left_duty, right_duty;
+			while(new_measure == 0);
+			v_measure = PID_MeasureVelocity(left_speed, right_speed);
+			w_measure = PID_MeasureRotation(left_speed, right_speed);
+			PID_Compensator(v_ref, w_ref, v_measure, w_measure, &v_error, &w_error, &delta_r, &delta_l);
+			PID_OutputDynamicControl(right_torque, left_torque, delta_r, delta_l, &right_torque, &left_torque);
+			PID_DynamicModel(right_torque, left_torque, v_measure, w_measure, &left_duty, &right_duty);
+			PWM_ChangeDuty(&htim3, right_duty);
+			PWM_ChangeDuty(&htim4, left_duty);
+		}
+		
 		
     /* USER CODE END WHILE */
 
@@ -190,10 +219,10 @@ void PWM_ChangeDuty(TIM_HandleTypeDef* htim, uint8_t duty) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {		//measure pulse of encoder timeout
 	if(htim->Instance == TIM2) {
-		//measure in 1ms
+		//measure in 10ms
 		htim2_check = 1;
-
-		htim2.Instance->CNT = 0x00;					//set counter = 0 to restart
+		new_measure = 1;
+		//htim2.Instance->CNT = 0x00;					//set counter = 0 to restart
 	}
 	
 	if(htim->Instance == TIM1) {
@@ -203,8 +232,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {		//measure pulse o
 
 void WheelRotationCalculate(void) {
 		if(htim2_check == 1) {
-			right_speed = (float)right_wheel_count * 100 * PI;	//count * time / PPR *2 PI(rad/s)
-			left_speed = (float)left_wheel_count * 100 * PI;
+			right_speed = (float)right_wheel_count * 5 * PI;	//(count/ (time * PPR)) *2 PI(rad/s) = (count / (0.01*20)) *2PI
+			left_speed = (float)left_wheel_count * 5 * PI;
 			right_wheel_count = 0;
 			left_wheel_count = 0;
 			htim2_check = 0;
