@@ -1090,7 +1090,7 @@ int runRadio(void)
 		UART_SendStr("\r\n");
 
 		// Wait ~0.5s
-		Delay_ms(500);
+		Delay_ms(100);
 	}
 
 #endif // DEMO_RX_ESB_ACK_PL
