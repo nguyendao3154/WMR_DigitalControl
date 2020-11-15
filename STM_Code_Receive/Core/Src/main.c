@@ -19,7 +19,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "i2c.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
@@ -28,7 +27,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "nrf24.h"
-#include "mpu6050.h"
+#include <stdbool.h>
+#include "pid.h"
+#include "systick.h"
+//#include "mpu6050.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,6 +62,9 @@ uint8_t position_buffer[4];
 float x_pos, y_pos;											//feedback position from RF
 uint16_t right_wheel_count = 0, left_wheel_count = 0;		//use to count encoder of 2 wheels
 float right_speed, left_speed;
+bool htim2_check = 0;
+
+uint32_t g_systick= 0;
 
 /* USER CODE END PV */
 
@@ -67,6 +72,7 @@ float right_speed, left_speed;
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void PWM_ChangeDuty(TIM_HandleTypeDef* htim, uint8_t duty);			//only used for TIM3 and TIM4 to control motor
+void WheelRotationCalculate(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -107,9 +113,12 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_USART2_UART_Init();
-  MX_I2C1_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-	runRadio();
+	
+	HAL_GPIO_WritePin(GPIOB, LEFT_2_Pin |RIGHT_2_Pin, GPIO_PIN_RESET);
+	HAL_TIM_Base_Start_IT(&htim2);
+	//runRadio();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -117,6 +126,7 @@ int main(void)
   while (1)
   {
 	  //uint8_t data = 'a';
+		
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -164,11 +174,14 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-
-}
-
-void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {				//finish reading data from RX FIFO NRF
-
+	if(GPIO_Pin == GPIO_PIN_3) {
+		right_wheel_count++;
+		return;
+	}
+	if(GPIO_Pin == GPIO_PIN_4) {
+		left_wheel_count++;
+		return;
+	}
 }
 
 void PWM_ChangeDuty(TIM_HandleTypeDef* htim, uint8_t duty) {
@@ -178,14 +191,24 @@ void PWM_ChangeDuty(TIM_HandleTypeDef* htim, uint8_t duty) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {		//measure pulse of encoder timeout
 	if(htim->Instance == TIM2) {
 		//measure in 1ms
-		right_speed = (float)right_wheel_count * 50;	//count * time / PPR (round/s)
-		left_speed = (float)left_wheel_count * 50;
-		right_wheel_count = 0;
-		left_wheel_count = 0;
+		htim2_check = 1;
 
 		htim2.Instance->CNT = 0x00;					//set counter = 0 to restart
-		HAL_TIM_Base_Start_IT(&htim2);
 	}
+	
+	if(htim->Instance == TIM1) {
+		g_systick++;
+	}
+}
+
+void WheelRotationCalculate(void) {
+		if(htim2_check == 1) {
+			right_speed = (float)right_wheel_count * 50;	//count * time / PPR (round/s)
+			left_speed = (float)left_wheel_count * 50;
+			right_wheel_count = 0;
+			left_wheel_count = 0;
+			htim2_check = 0;
+		}
 }
 /* USER CODE END 4 */
 
