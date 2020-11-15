@@ -37,4 +37,4 @@ stm_wmr_ver1\main.o: ../Core/Inc/usart.h
 stm_wmr_ver1\main.o: ../Core/Inc/gpio.h
 stm_wmr_ver1\main.o: ../Core/Inc/nrf24.h
 stm_wmr_ver1\main.o: ../Core/Inc/support.h
-stm_wmr_ver1\main.o: ../Core/Inc/mpu6050.h
+stm_wmr_ver1\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
