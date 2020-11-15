@@ -8,7 +8,7 @@ extern uint32_t g_systick;
 //static float vRef, wRef;
 
 //static float dv_Ref, dw_Ref;
-
+extern float left_speed, right_speed;
 float r_torque, l_torque;
 
 void PID_Calculate_Torque(float x_fb, float y_fb, float phi_fb) {

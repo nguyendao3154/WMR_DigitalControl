@@ -203,8 +203,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {		//measure pulse o
 
 void WheelRotationCalculate(void) {
 		if(htim2_check == 1) {
-			right_speed = (float)right_wheel_count * 50;	//count * time / PPR (round/s)
-			left_speed = (float)left_wheel_count * 50;
+			right_speed = (float)right_wheel_count * 100 * PI;	//count * time / PPR *2 PI(rad/s)
+			left_speed = (float)left_wheel_count * 100 * PI;
 			right_wheel_count = 0;
 			left_wheel_count = 0;
 			htim2_check = 0;
