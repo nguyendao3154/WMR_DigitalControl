@@ -10,3 +10,5 @@ STM_Code_Transmit/STM_WMR_Ver1.ioc
 STM_Code_Transmit/STM_WMR_Ver1 Debug.cfg
 STM_Code_Transmit/STM32F103C8TX_FLASH.ld
 STM_Code_Receive.rar
+*.o
+*.crf
