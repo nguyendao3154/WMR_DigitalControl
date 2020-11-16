@@ -51,13 +51,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint8_t position_buffer[4];
-/*
- * Byte 0: x decimal
- * 		1: x fraction
- * 		2: y decimal
- * 		3: y fraction
- */
 
 float x_pos, y_pos;											//feedback position from RF
 float right_speed, left_speed;
@@ -66,13 +59,20 @@ bool htim2_check = 0;
 uint32_t g_systick= 0;
 
 bool new_measure = 0;
+bool new_pos_measure = 0;
 
 uint16_t right_wheel_count = 0, left_wheel_count = 0;		//use to count encoder of 2 wheels
 uint16_t count_tick = 0;
 
 bool timer2_flag = false;
 
-
+extern uint8_t nRF24_payload[4];
+/*
+ * Byte 0: x decimal
+ * 			1: x fraction
+ * 			2: y decimal
+ * 			3: y fraction
+ */
 
 /* USER CODE END PV */
 
@@ -127,10 +127,32 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim2);
-//	HAL_TIM_Base_Start_IT(&htim1);
+	HAL_TIM_Base_Start_IT(&htim1);
+
+	//feedback position variables
+		float x_fb_old;
+		float y_fb_old;
+		float x_fb;
+		float y_fb;
+		float phi_fb;
 	
+	//Set parameter for control motor
+		float v_ref, w_ref;									//output of kinematic control
+		float v_measure;
+		float w_measure;
+		
+		float left_torque, right_torque;		
+		float v_error = 0, w_error = 0;
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+	
+	HAL_Delay(1000);
+	
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOB, LEFT_2_Pin |RIGHT_2_Pin, GPIO_PIN_RESET);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
 	runRadio();
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -139,17 +161,29 @@ int main(void)
   {
 		//check position, calculate feedback value
 		task_100ms();
-		float x_fb;
-		float y_fb;
-		float phi_fb;
+		//if receive new position fb
+		if(new_pos_measure == 1) {
+			//handle data
+			x_fb_old = x_fb;
+			y_fb_old = y_fb;
+			
+			//getting new feedback position from nrf_payload
+			x_fb = (float)nRF24_payload[0] + nRF24_payload[1]*0.01;
+			y_fb = (float)nRF24_payload[1] + nRF24_payload[3]*0.01;
+			//calculate phi_fb
+			
+			phi_fb = atan2(y_fb - y_fb_old, x_fb - x_fb_old);
+			
+			//after finishing handling data
+			new_pos_measure = 0;
+		}
 		
 		//Set parameter for control motor
-		float v_ref, w_ref;									//output of kinematic control
-		float v_measure = PID_MeasureVelocity(left_speed, right_speed);
-		float w_measure = PID_MeasureRotation(left_speed, right_speed);
+		v_measure = PID_MeasureVelocity(left_speed, right_speed);
+		w_measure = PID_MeasureRotation(left_speed, right_speed);
 		
-		float left_torque, right_torque;		
-		float v_error = 0, w_error = 0;			//used for Compensator	
+		v_error = 0;
+		w_error = 0;			//used for Compensator	
 		//motor control:
 		PID_KinematicControl(x_fb, y_fb, phi_fb, &v_ref, &w_ref);
 		PID_DynamicInverse(v_ref, w_ref, v_measure, w_measure, &left_torque, &right_torque);
@@ -157,13 +191,15 @@ int main(void)
 			float delta_r, delta_l;								//output of compensator
 			uint8_t left_duty, right_duty;
 			while(new_measure == 0);
+			new_measure = 0;
+			WheelRotationCalculate();
 			v_measure = PID_MeasureVelocity(left_speed, right_speed);
 			w_measure = PID_MeasureRotation(left_speed, right_speed);
 			PID_Compensator(v_ref, w_ref, v_measure, w_measure, &v_error, &w_error, &delta_r, &delta_l);
 			PID_OutputDynamicControl(right_torque, left_torque, delta_r, delta_l, &right_torque, &left_torque);
 			PID_DynamicModel(right_torque, left_torque, v_measure, w_measure, &left_duty, &right_duty);
-			PWM_ChangeDuty(&htim3, right_duty);
-			PWM_ChangeDuty(&htim4, left_duty);
+			PWM_ChangeDuty(&htim3, left_duty);
+			PWM_ChangeDuty(&htim4, right_duty);
 		}
 		
 		
@@ -263,6 +299,7 @@ void task_100ms(void)
 		{
 			//UART_SendStr("in timer ");
 			radio_receive();
+			new_pos_measure = 1;
 			count_tick = 0;
 		}
 	}
