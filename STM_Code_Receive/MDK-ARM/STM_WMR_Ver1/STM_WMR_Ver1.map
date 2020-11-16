@@ -1588,13 +1588,13 @@ Image Symbol Table
     i.radio_receive                          0x08001f7c   Section        0  radio_demo.o(i.radio_receive)
     i.runRadio                               0x08001fc8   Section        0  radio_demo.o(i.runRadio)
     i.task_100ms                             0x080020a8   Section        0  main.o(i.task_100ms)
-    .constdata                               0x080020c8   Section        3  radio_demo.o(.constdata)
-    nRF24_ADDR                               0x080020c8   Data           3  radio_demo.o(.constdata)
-    .constdata                               0x080020cb   Section       13  nrf24.o(.constdata)
-    nRF24_RX_PW_PIPE                         0x080020cb   Data           6  nrf24.o(.constdata)
-    nRF24_ADDR_REGS                          0x080020d1   Data           7  nrf24.o(.constdata)
-    .constdata                               0x080020d8   Section       16  system_stm32f1xx.o(.constdata)
-    .constdata                               0x080020e8   Section        8  system_stm32f1xx.o(.constdata)
+    .constdata                               0x080020c8   Section        5  radio_demo.o(.constdata)
+    nRF24_ADDR                               0x080020c8   Data           5  radio_demo.o(.constdata)
+    .constdata                               0x080020cd   Section       13  nrf24.o(.constdata)
+    nRF24_RX_PW_PIPE                         0x080020cd   Data           6  nrf24.o(.constdata)
+    nRF24_ADDR_REGS                          0x080020d3   Data           7  nrf24.o(.constdata)
+    .constdata                               0x080020da   Section       16  system_stm32f1xx.o(.constdata)
+    .constdata                               0x080020ea   Section        8  system_stm32f1xx.o(.constdata)
     .data                                    0x20000000   Section       16  main.o(.data)
     .data                                    0x20000010   Section        6  radio_demo.o(.data)
     .data                                    0x20000018   Section       12  stm32f1xx_hal.o(.data)
@@ -1771,10 +1771,10 @@ Image Symbol Table
     radio_receive                            0x08001f7d   Thumb Code    56  radio_demo.o(i.radio_receive)
     runRadio                                 0x08001fc9   Thumb Code   150  radio_demo.o(i.runRadio)
     task_100ms                               0x080020a9   Thumb Code    26  main.o(i.task_100ms)
-    AHBPrescTable                            0x080020d8   Data          16  system_stm32f1xx.o(.constdata)
-    APBPrescTable                            0x080020e8   Data           8  system_stm32f1xx.o(.constdata)
-    Region$$Table$$Base                      0x080020f0   Number         0  anon$$obj.o(Region$$Table)
-    Region$$Table$$Limit                     0x08002110   Number         0  anon$$obj.o(Region$$Table)
+    AHBPrescTable                            0x080020da   Data          16  system_stm32f1xx.o(.constdata)
+    APBPrescTable                            0x080020ea   Data           8  system_stm32f1xx.o(.constdata)
+    Region$$Table$$Base                      0x080020f4   Number         0  anon$$obj.o(Region$$Table)
+    Region$$Table$$Limit                     0x08002114   Number         0  anon$$obj.o(Region$$Table)
     timer2_flag                              0x20000000   Data           1  main.o(.data)
     right_wheel_count                        0x20000002   Data           2  main.o(.data)
     left_wheel_count                         0x20000004   Data           2  main.o(.data)
@@ -1804,9 +1804,9 @@ Memory Map of the image
 
   Image Entry point : 0x080000ed
 
-  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x00002138, Max: 0x00010000, ABSOLUTE)
+  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x0000213c, Max: 0x00010000, ABSOLUTE)
 
-    Execution Region ER_IROM1 (Exec base: 0x08000000, Load base: 0x08000000, Size: 0x00002110, Max: 0x00010000, ABSOLUTE)
+    Execution Region ER_IROM1 (Exec base: 0x08000000, Load base: 0x08000000, Size: 0x00002114, Max: 0x00010000, ABSOLUTE)
 
     Exec Addr    Load Addr    Size         Type   Attr      Idx    E Section Name        Object
 
@@ -1946,27 +1946,28 @@ Memory Map of the image
     0x08001f7c   0x08001f7c   0x0000004c   Code   RO          534    i.radio_receive     radio_demo.o
     0x08001fc8   0x08001fc8   0x000000e0   Code   RO          535    i.runRadio          radio_demo.o
     0x080020a8   0x080020a8   0x00000020   Code   RO           21    i.task_100ms        main.o
-    0x080020c8   0x080020c8   0x00000003   Data   RO          536    .constdata          radio_demo.o
-    0x080020cb   0x080020cb   0x0000000d   Data   RO          640    .constdata          nrf24.o
-    0x080020d8   0x080020d8   0x00000010   Data   RO         3918    .constdata          system_stm32f1xx.o
-    0x080020e8   0x080020e8   0x00000008   Data   RO         3919    .constdata          system_stm32f1xx.o
-    0x080020f0   0x080020f0   0x00000020   Data   RO         3983    Region$$Table       anon$$obj.o
+    0x080020c8   0x080020c8   0x00000005   Data   RO          536    .constdata          radio_demo.o
+    0x080020cd   0x080020cd   0x0000000d   Data   RO          640    .constdata          nrf24.o
+    0x080020da   0x080020da   0x00000010   Data   RO         3918    .constdata          system_stm32f1xx.o
+    0x080020ea   0x080020ea   0x00000008   Data   RO         3919    .constdata          system_stm32f1xx.o
+    0x080020f2   0x080020f2   0x00000002   PAD
+    0x080020f4   0x080020f4   0x00000020   Data   RO         3983    Region$$Table       anon$$obj.o
 
 
-    Execution Region RW_IRAM1 (Exec base: 0x20000000, Load base: 0x08002110, Size: 0x000005f0, Max: 0x00005000, ABSOLUTE)
+    Execution Region RW_IRAM1 (Exec base: 0x20000000, Load base: 0x08002114, Size: 0x000005f0, Max: 0x00005000, ABSOLUTE)
 
     Exec Addr    Load Addr    Size         Type   Attr      Idx    E Section Name        Object
 
-    0x20000000   0x08002110   0x00000010   Data   RW           22    .data               main.o
-    0x20000010   0x08002120   0x00000006   Data   RW          537    .data               radio_demo.o
-    0x20000016   0x08002126   0x00000002   PAD
-    0x20000018   0x08002128   0x0000000c   Data   RW         1350    .data               stm32f1xx_hal.o
-    0x20000024   0x08002134   0x00000004   Data   RW         3920    .data               system_stm32f1xx.o
+    0x20000000   0x08002114   0x00000010   Data   RW           22    .data               main.o
+    0x20000010   0x08002124   0x00000006   Data   RW          537    .data               radio_demo.o
+    0x20000016   0x0800212a   0x00000002   PAD
+    0x20000018   0x0800212c   0x0000000c   Data   RW         1350    .data               stm32f1xx_hal.o
+    0x20000024   0x08002138   0x00000004   Data   RW         3920    .data               system_stm32f1xx.o
     0x20000028        -       0x00000054   Zero   RW          240    .bss                i2c.o
     0x2000007c        -       0x00000058   Zero   RW          282    .bss                spi.o
     0x200000d4        -       0x000000d8   Zero   RW          326    .bss                tim.o
     0x200001ac        -       0x00000040   Zero   RW          378    .bss                usart.o
-    0x200001ec   0x08002138   0x00000004   PAD
+    0x200001ec   0x0800213c   0x00000004   PAD
     0x200001f0        -       0x00000400   Zero   RW            1    STACK               startup_stm32f103xb.o
 
 
@@ -1981,7 +1982,7 @@ Image component sizes
        156         26          0          0         84       1645   i2c.o
        202         18          0         16          0     446211   main.o
       1046         54         13          0          0      18960   nrf24.o
-       420        122          3          6          0       4319   radio_demo.o
+       420        122          5          6          0       4319   radio_demo.o
        184         24          0          0         88       1669   spi.o
         36          8        236          0       1024        808   startup_stm32f103xb.o
        164         28          0         12          0       5941   stm32f1xx_hal.o
@@ -2000,9 +2001,9 @@ Image component sizes
        148         20          0          0         64       1674   usart.o
 
     ----------------------------------------------------------------------
-      8018        590        308         40       1480     553688   Object Totals
+      8018        590        312         40       1480     553688   Object Totals
          0          0         32          0          0          0   (incl. Generated)
-        28          0          0          2          4          0   (incl. Padding)
+        28          0          2          2          4          0   (incl. Padding)
 
     ----------------------------------------------------------------------
 
@@ -2041,15 +2042,15 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   
 
-      8156        606        308         40       1480     548936   Grand Totals
-      8156        606        308         40       1480     548936   ELF Image Totals
-      8156        606        308         40          0          0   ROM Totals
+      8156        606        312         40       1480     548936   Grand Totals
+      8156        606        312         40       1480     548936   ELF Image Totals
+      8156        606        312         40          0          0   ROM Totals
 
 ==============================================================================
 
-    Total RO  Size (Code + RO Data)                 8464 (   8.27kB)
+    Total RO  Size (Code + RO Data)                 8468 (   8.27kB)
     Total RW  Size (RW Data + ZI Data)              1520 (   1.48kB)
-    Total ROM Size (Code + RO Data + RW Data)       8504 (   8.30kB)
+    Total ROM Size (Code + RO Data + RW Data)       8508 (   8.31kB)
 
 ==============================================================================
 

@@ -1046,10 +1046,10 @@ int runRadio(void)
 	// The transmitter sends a 10-byte packets to the address 'ESB' with Auto-ACK (ShockBurst enabled)
 
 	// Set RF channel
-	nRF24_SetRFChannel(40);
+	nRF24_SetRFChannel(10);
 
 	// Set data rate
-	nRF24_SetDataRate(nRF24_DR_2Mbps);
+	nRF24_SetDataRate(nRF24_DR_250kbps);
 
 	// Set CRC scheme
 	nRF24_SetCRCScheme(nRF24_CRC_2byte);
@@ -1058,7 +1058,7 @@ int runRadio(void)
 	nRF24_SetAddrWidth(3);
 
 	// Configure TX PIPE
-	static const uint8_t nRF24_ADDR[] = {'E', 'S', 'B'};
+	static const uint8_t nRF24_ADDR[] = {'L', 'I', 'S', 'Z', 'T'};
 	nRF24_SetAddr(nRF24_PIPETX, nRF24_ADDR); // program TX address
 	nRF24_SetAddr(nRF24_PIPE0, nRF24_ADDR);	 // program address for pipe#0, must be same as TX (for Auto-ACK)
 
@@ -1066,7 +1066,7 @@ int runRadio(void)
 	nRF24_SetTXPower(nRF24_TXPWR_0dBm);
 
 	// Configure auto retransmit: 10 retransmissions with pause of 2500s in between
-	nRF24_SetAutoRetr(nRF24_ARD_2500us, 10);
+	nRF24_SetAutoRetr(nRF24_ARD_2500us, 1);
 
 	// Enable Auto-ACK for pipe#0 (for ACK packets)
 	nRF24_EnableAA(nRF24_PIPE0);
@@ -1091,61 +1091,61 @@ int runRadio(void)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 
-	while (1)
-	{
-#pragma clang diagnostic pop
+// 	while (1)
+// 	{
+// #pragma clang diagnostic pop
 
-		// payload_length = (uint8_t)(2 + (j + j /10)% 7);
+// 		// payload_length = (uint8_t)(2 + (j + j /10)% 7);
 
-		// // Prepare data packet
-		// for (i = 0; i < payload_length; i++) {
-		// 	nRF24_payload[i] = (uint8_t) j++;
-		// 	if (j > 0x000000FF) j = 0;
-		// }
-		for (i = 0; i < 4; i++)
-		{
-			nRF24_payload[i] = receive_buffer[i];
-		}
-		payload_length = sizeof(nRF24_payload);
-		// Print a payload
-		UART_SendStr("Sent: ");
-		UART_SendBufHex((char *)nRF24_payload, payload_length);
-		// UART_SendStr("< ... TX: ");
+// 		// // Prepare data packet
+// 		// for (i = 0; i < payload_length; i++) {
+// 		// 	nRF24_payload[i] = (uint8_t) j++;
+// 		// 	if (j > 0x000000FF) j = 0;
+// 		// }
+// 		for (i = 0; i < 4; i++)
+// 		{
+// 			nRF24_payload[i] = receive_buffer[i];
+// 		}
+// 		payload_length = sizeof(nRF24_payload);
+// 		// Print a payload
+// 		UART_SendStr("Sent: ");
+// 		UART_SendBufHex((char *)nRF24_payload, payload_length);
+// 		// UART_SendStr("< ... TX: ");
 
-		// Transmit a packet
-		tx_res = nRF24_TransmitPacket(nRF24_payload, payload_length);
-		otx = nRF24_GetRetransmitCounters();
-		nRF24_ReadPayloadDpl(nRF24_payload, &payload_length);
-		otx_plos_cnt = (otx & nRF24_MASK_PLOS_CNT) >> 4; // packets lost counter
-		otx_arc_cnt = (otx & nRF24_MASK_ARC_CNT);		 // auto retransmissions counter
-		switch (tx_res)
-		{
-		case nRF24_TX_SUCCESS:
-			UART_SendStr("OK");
-			break;
-		case nRF24_TX_TIMEOUT:
-			UART_SendStr("TIMEOUT");
-			break;
-		case nRF24_TX_MAXRT:
-			UART_SendStr("MAX RETRANSMIT");
-			packets_lost += otx_plos_cnt;
-			nRF24_ResetPLOS();
-			break;
-		default:
-			UART_SendStr("ERROR");
-			break;
-		}
-		// UART_SendStr("   ACK_PAYLOAD=>");
-		// UART_SendBufHex((char *) nRF24_payload, payload_length);
-		// UART_SendStr("<   ARC=");
-		// UART_SendInt(otx_arc_cnt);
-		// UART_SendStr(" LOST=");
-		// UART_SendInt(packets_lost);
-		UART_SendStr("\r\n");
+// 		// Transmit a packet
+// 		tx_res = nRF24_TransmitPacket(nRF24_payload, payload_length);
+// 		otx = nRF24_GetRetransmitCounters();
+// 		nRF24_ReadPayloadDpl(nRF24_payload, &payload_length);
+// 		otx_plos_cnt = (otx & nRF24_MASK_PLOS_CNT) >> 4; // packets lost counter
+// 		otx_arc_cnt = (otx & nRF24_MASK_ARC_CNT);		 // auto retransmissions counter
+// 		switch (tx_res)
+// 		{
+// 		case nRF24_TX_SUCCESS:
+// 			UART_SendStr("OK");
+// 			break;
+// 		case nRF24_TX_TIMEOUT:
+// 			UART_SendStr("TIMEOUT");
+// 			break;
+// 		case nRF24_TX_MAXRT:
+// 			UART_SendStr("MAX RETRANSMIT");
+// 			packets_lost += otx_plos_cnt;
+// 			nRF24_ResetPLOS();
+// 			break;
+// 		default:
+// 			UART_SendStr("ERROR");
+// 			break;
+// 		}
+// 		// UART_SendStr("   ACK_PAYLOAD=>");
+// 		// UART_SendBufHex((char *) nRF24_payload, payload_length);
+// 		// UART_SendStr("<   ARC=");
+// 		// UART_SendInt(otx_arc_cnt);
+// 		// UART_SendStr(" LOST=");
+// 		// UART_SendInt(packets_lost);
+// 		UART_SendStr("\r\n");
 
-		// Wait ~0.5s
-		Delay_ms(100);
-	}
+// 		// Wait ~0.5s
+// 		// Delay_ms(100);
+// 	}
 
 #endif // DEMO_RX_ESB_ACK_PL
 

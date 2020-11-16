@@ -144,10 +144,10 @@ int runRadio(void)
     // The transmitter sends a 10-byte packets to the address 'ESB' with Auto-ACK (ShockBurst enabled)
 
     // Set RF channel
-    nRF24_SetRFChannel(40);
+    nRF24_SetRFChannel(10);
 
     // Set data rate
-    nRF24_SetDataRate(nRF24_DR_2Mbps);
+    nRF24_SetDataRate(nRF24_DR_250kbps);
 
     // Set CRC scheme
     nRF24_SetCRCScheme(nRF24_CRC_2byte);
@@ -156,9 +156,9 @@ int runRadio(void)
     nRF24_SetAddrWidth(3);
 
     // Configure RX PIPE
-    static const uint8_t nRF24_ADDR[] = {'E', 'S', 'B'};
+    static const uint8_t nRF24_ADDR[] = {'L', 'I', 'S', 'Z', 'T'};
     nRF24_SetAddr(nRF24_PIPE1, nRF24_ADDR);        // program address for pipe
-    nRF24_SetRXPipe(nRF24_PIPE1, nRF24_AA_ON, 10); // Auto-ACK: enabled, payload length: 10 bytes
+    nRF24_SetRXPipe(nRF24_PIPE1, nRF24_AA_ON, 4); // Auto-ACK: enabled, payload length: 10 bytes
 
     // Set TX power for Auto-ACK (maximum, to ensure that transmitter will hear ACK reply)
     nRF24_SetTXPower(nRF24_TXPWR_0dBm);

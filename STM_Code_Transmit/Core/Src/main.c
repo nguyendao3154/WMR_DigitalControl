@@ -176,7 +176,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   if(huart->Instance == huart2.Instance)
   {
     HAL_UART_Receive_IT(&huart2, receive_buffer, sizeof(receive_buffer));
-    UART_SendBufHex((char*)receive_buffer, sizeof(receive_buffer));
+//    UART_SendBufHex((char*)receive_buffer, sizeof(receive_buffer));
   }
 }
 
