@@ -139,6 +139,7 @@ int main(void)
   {
 		//check position, calculate feedback value
 		task_100ms();
+		float x_fb;
 		float y_fb;
 		float phi_fb;
 		
@@ -253,6 +254,7 @@ void WheelRotationCalculate(void) {
 			left_wheel_count = 0;
 			htim2_check = 0;
 		}
+}
 void task_100ms(void)
 {
 	if(timer2_flag)
