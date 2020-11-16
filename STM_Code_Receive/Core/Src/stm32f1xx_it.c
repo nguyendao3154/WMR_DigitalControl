@@ -56,6 +56,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 /* USER CODE BEGIN EV */
 
@@ -198,17 +199,45 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles EXTI line1 interrupt.
+  * @brief This function handles EXTI line3 interrupt.
   */
-void EXTI1_IRQHandler(void)
+void EXTI3_IRQHandler(void)
 {
-  /* USER CODE BEGIN EXTI1_IRQn 0 */
+  /* USER CODE BEGIN EXTI3_IRQn 0 */
 
-  /* USER CODE END EXTI1_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_1);
-  /* USER CODE BEGIN EXTI1_IRQn 1 */
+  /* USER CODE END EXTI3_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_3);
+  /* USER CODE BEGIN EXTI3_IRQn 1 */
 
-  /* USER CODE END EXTI1_IRQn 1 */
+  /* USER CODE END EXTI3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles EXTI line4 interrupt.
+  */
+void EXTI4_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI4_IRQn 0 */
+
+  /* USER CODE END EXTI4_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_4);
+  /* USER CODE BEGIN EXTI4_IRQn 1 */
+
+  /* USER CODE END EXTI4_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM1 break interrupt.
+  */
+void TIM1_BRK_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM1_BRK_IRQn 0 */
+
+  /* USER CODE END TIM1_BRK_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim1);
+  /* USER CODE BEGIN TIM1_BRK_IRQn 1 */
+
+  /* USER CODE END TIM1_BRK_IRQn 1 */
 }
 
 /**

@@ -19,7 +19,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "i2c.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
@@ -28,7 +27,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "nrf24.h"
-#include "stdbool.h"
+#include <stdbool.h>
+#include "pid.h"
+#include "systick.h"
+//#include "mpu6050.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,6 +61,11 @@ uint8_t position_buffer[4];
 
 float x_pos, y_pos;											//feedback position from RF
 float right_speed, left_speed;
+bool htim2_check = 0;
+
+uint32_t g_systick= 0;
+
+bool new_measure = 0;
 
 uint16_t right_wheel_count = 0, left_wheel_count = 0;		//use to count encoder of 2 wheels
 uint16_t count_tick = 0;
@@ -73,7 +80,9 @@ bool timer2_flag = false;
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void PWM_ChangeDuty(TIM_HandleTypeDef* htim, uint8_t duty);			//only used for TIM3 and TIM4 to control motor
+
 void doc_encoder(void);
+void WheelRotationCalculate(void);
 void task_100ms(void);
 /* USER CODE END PFP */
 
@@ -115,10 +124,12 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_USART2_UART_Init();
-  MX_I2C1_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim2);
 //	HAL_TIM_Base_Start_IT(&htim1);
+	
+	HAL_GPIO_WritePin(GPIOB, LEFT_2_Pin |RIGHT_2_Pin, GPIO_PIN_RESET);
 	runRadio();
   /* USER CODE END 2 */
 
@@ -126,8 +137,35 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  //uint8_t data = 'a';
+		//check position, calculate feedback value
 		task_100ms();
+		float y_fb;
+		float phi_fb;
+		
+		//Set parameter for control motor
+		float v_ref, w_ref;									//output of kinematic control
+		float v_measure = PID_MeasureVelocity(left_speed, right_speed);
+		float w_measure = PID_MeasureRotation(left_speed, right_speed);
+		
+		float left_torque, right_torque;		
+		float v_error = 0, w_error = 0;			//used for Compensator	
+		//motor control:
+		PID_KinematicControl(x_fb, y_fb, phi_fb, &v_ref, &w_ref);
+		PID_DynamicInverse(v_ref, w_ref, v_measure, w_measure, &left_torque, &right_torque);
+		for(uint8_t i = 0; i < 10; i++) {
+			float delta_r, delta_l;								//output of compensator
+			uint8_t left_duty, right_duty;
+			while(new_measure == 0);
+			v_measure = PID_MeasureVelocity(left_speed, right_speed);
+			w_measure = PID_MeasureRotation(left_speed, right_speed);
+			PID_Compensator(v_ref, w_ref, v_measure, w_measure, &v_error, &w_error, &delta_r, &delta_l);
+			PID_OutputDynamicControl(right_torque, left_torque, delta_r, delta_l, &right_torque, &left_torque);
+			PID_DynamicModel(right_torque, left_torque, v_measure, w_measure, &left_duty, &right_duty);
+			PWM_ChangeDuty(&htim3, right_duty);
+			PWM_ChangeDuty(&htim4, left_duty);
+		}
+		
+		
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -175,11 +213,14 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-
-}
-
-void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {				//finish reading data from RX FIFO NRF
-
+	if(GPIO_Pin == GPIO_PIN_3) {
+		right_wheel_count++;
+		return;
+	}
+	if(GPIO_Pin == GPIO_PIN_4) {
+		left_wheel_count++;
+		return;
+	}
 }
 
 void PWM_ChangeDuty(TIM_HandleTypeDef* htim, uint8_t duty) {
@@ -193,20 +234,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {		//measure pulse o
 		
 		timer2_flag = true;
 		//htim2.Instance->CNT = 0x00;					//set counter = 0 to restart
+		//measure in 10ms
+		htim2_check = 1;
+		new_measure = 1;
 		count_tick++;
 	}
-		
 	
+	if(htim->Instance == TIM1) {
+		g_systick++;
+	}
 }
-void doc_encoder(void)
-{
-	//measure in 1ms
-		right_speed = (float)right_wheel_count * 50;	//count * time / PPR (round/s)
-		left_speed = (float)left_wheel_count * 50;
-		right_wheel_count = 0;
-		left_wheel_count = 0;
-		
-}
+
+void WheelRotationCalculate(void) {
+		if(htim2_check == 1) {
+			right_speed = (float)right_wheel_count * 5 * PI;	//(count/ (time * PPR)) *2 PI(rad/s) = (count / (0.01*20)) *2PI
+			left_speed = (float)left_wheel_count * 5 * PI;
+			right_wheel_count = 0;
+			left_wheel_count = 0;
+			htim2_check = 0;
+		}
 void task_100ms(void)
 {
 	if(timer2_flag)
