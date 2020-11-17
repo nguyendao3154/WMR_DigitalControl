@@ -21,7 +21,12 @@ float PID_MeasureRotation(float left, float right) {
 																these variables are inputs of inverse dynamic model
 */
 void PID_KinematicControl(float x_fb, float y_fb, float phi_fb, float* v_out, float* w_out) {
-	uint32_t time = g_systick;
+	/*******************************/
+	/*
+	Note: g_systick (ms) => divide by 1000 to get sec
+	*/
+	float time = g_systick/1000;				
+	/*******************************/
 	float xRef = 1.1 + 0.7*sin(FREQ*time);
 	float dxRef = FREQ*0.7*cos(FREQ*time);
   float ddxRef = (-1)*FREQ*FREQ*0.7*sin(FREQ*time);

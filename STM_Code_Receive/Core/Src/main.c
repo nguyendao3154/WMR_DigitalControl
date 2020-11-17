@@ -141,8 +141,14 @@ int main(void)
 		float v_measure;
 		float w_measure;
 		
+		
 		float left_torque, right_torque;		
 		float v_error = 0, w_error = 0;
+		
+		float delta_r, delta_l;								//output of compensato
+		
+		uint8_t left_duty, right_duty;
+		
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 	
 	HAL_Delay(1000);
@@ -169,7 +175,7 @@ int main(void)
 			
 			//getting new feedback position from nrf_payload
 			x_fb = (float)nRF24_payload[0] + nRF24_payload[1]*0.01;
-			y_fb = (float)nRF24_payload[1] + nRF24_payload[3]*0.01;
+			y_fb = (float)nRF24_payload[2] + nRF24_payload[3]*0.01;
 			//calculate phi_fb
 			
 			phi_fb = atan2(y_fb - y_fb_old, x_fb - x_fb_old);
@@ -188,8 +194,6 @@ int main(void)
 		PID_KinematicControl(x_fb, y_fb, phi_fb, &v_ref, &w_ref);
 		PID_DynamicInverse(v_ref, w_ref, v_measure, w_measure, &left_torque, &right_torque);
 		for(uint8_t i = 0; i < 10; i++) {
-			float delta_r, delta_l;								//output of compensator
-			uint8_t left_duty, right_duty;
 			while(new_measure == 0);
 			new_measure = 0;
 			WheelRotationCalculate();
