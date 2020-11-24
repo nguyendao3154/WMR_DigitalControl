@@ -25,7 +25,7 @@ void PID_KinematicControl(float x_fb, float y_fb, float phi_fb, float* v_out, fl
 	/*
 	Note: g_systick (ms) => divide by 1000 to get sec
 	*/
-	float time = g_systick/1000;				
+	float time = (float) g_systick/1000;				
 	/*******************************/
 	float xRef = 1.1 + 0.7*sin(FREQ*time);
 	float dxRef = FREQ*0.7*cos(FREQ*time);
