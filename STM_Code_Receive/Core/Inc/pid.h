@@ -19,8 +19,8 @@
 //Set up controller parameters
 #define KPHI_OUTER 10
 #define KV_OUTER 5
-#define KP_INNER 0.0002
-#define KD_INNER 0.00001
+#define KP_INNER 0.0005
+#define KD_INNER 0.00002
 
 #define MOTOR_MAX_SPEED	104.7					//rad/s = 1000 RPM
 

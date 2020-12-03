@@ -27,12 +27,12 @@ void PID_KinematicControl(float x_fb, float y_fb, float phi_fb, float* v_out, fl
 	*/
 	float time = (float) g_systick/1000;				
 	/*******************************/
-	float xRef = 1.1 + 0.7*sin(FREQ*time);
-	float dxRef = FREQ*0.7*cos(FREQ*time);
-  float ddxRef = (-1)*FREQ*FREQ*0.7*sin(FREQ*time);
-  float yRef = 0.9 + 0.7*sin(2*FREQ * time);
-  float dyRef = 2*FREQ*0.7*cos(2*FREQ*time);
-  float ddyRef = -4*FREQ*FREQ*0.7*sin(2*FREQ*time);
+	float xRef = 0.5 + 0.4*sin(FREQ*time);
+	float dxRef = FREQ*0.4*cos(FREQ*time);
+  float ddxRef = (-1)*FREQ*FREQ*0.4*sin(FREQ*time);
+  float yRef = 0.5 + 0.4*sin(2*FREQ * time);
+  float dyRef = 2*FREQ*0.4*cos(2*FREQ*time);
+  float ddyRef = -4*FREQ*FREQ*0.4*sin(2*FREQ*time);
   float vRef = sqrt(dxRef*dxRef + dyRef*dyRef);
   float wRef = (dxRef*ddyRef - dyRef*ddxRef) / (dxRef*dxRef + dyRef*dyRef);
 	
