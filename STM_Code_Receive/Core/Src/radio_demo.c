@@ -9,7 +9,7 @@
 
 #define HEX_CHARS "0123456789ABCDEF"
 
-uint8_t nRF24_payload[2];
+uint8_t nRF24_payload[6];
 
 // Pipe number
 nRF24_RXResult pipe;
@@ -71,28 +71,33 @@ void UART_SendInt(int32_t num)
 
 void radio_receive(void)
 {
-	  //
-    	// Constantly poll the status of the RX FIFO and get a payload if FIFO is not empty
-    	//
-    	// This is far from best solution, but it's ok for testing purposes
-    	// More smart way is to use the IRQ pin :)
-    	//
-    	if (nRF24_GetStatus_RXFIFO() != nRF24_STATUS_RXFIFO_EMPTY) {
-    		// Get a payload from the transceiver
-    		pipe = nRF24_ReadPayload(nRF24_payload, &payload_length);
+    //
+    // Constantly poll the status of the RX FIFO and get a payload if FIFO is not empty
+    //
+    // This is far from best solution, but it's ok for testing purposes
+    // More smart way is to use the IRQ pin :)
+    //
+    UART_SendStr("in radio: ");
+    if (nRF24_GetStatus_RXFIFO() != nRF24_STATUS_RXFIFO_EMPTY)
+    {
+        // Get a payload from the transceiver
+        pipe = nRF24_ReadPayload(nRF24_payload, &payload_length);
 
-    		// Clear all pending IRQ flags
-			nRF24_ClearIRQFlags();
-
-			// Print a payload contents to UART
-			UART_SendStr("Received: ");
-			// UART_SendInt(pipe);
-			// UART_SendStr(" PAYLOAD:>");
-			UART_SendBufHex((char *) nRF24_payload, sizeof(nRF24_payload));
-			UART_SendStr("\r\n");
-    	}
+        // Clear all pending IRQ flags
+        nRF24_ClearIRQFlags();
+        UART_SendBufHex((char *)nRF24_payload, sizeof(nRF24_payload));
+        UART_SendStr("\r\n");
+        if ((nRF24_payload[0] == 0xbd) && (nRF24_payload[5] == 0xed))
+        {
+            // Print a payload contents to UART
+            UART_SendStr("Received: ");
+            // UART_SendInt(pipe);
+            // UART_SendStr(" PAYLOAD:>");
+            UART_SendBufHex((char *)nRF24_payload, sizeof(nRF24_payload));
+            UART_SendStr("\r\n");
+        }
+    }
 }
-
 
 #define DEMO_RX_SINGLE 0     // Single address receiver (1 pipe)
 #define DEMO_RX_MULTI 0      // Multiple address receiver (3 pipes)
@@ -108,7 +113,6 @@ void radio_receive(void)
 #if ((DEMO_RX_SINGLE + DEMO_RX_MULTI + DEMO_RX_SOLAR + DEMO_TX_SINGLE + DEMO_TX_MULTI + DEMO_RX_SINGLE_ESB + DEMO_TX_SINGLE_ESB + DEMO_RX_ESB_ACK_PL + DEMO_TX_ESB_ACK_PL) != 1)
 #error "Define only one DEMO_xx, use the '1' value"
 #endif
-
 
 void runRadio(void)
 {
@@ -131,7 +135,6 @@ void runRadio(void)
 
     // Initialize the nRF24L01 to its default state
     nRF24_Init();
-
 
 #if (DEMO_RX_ESB_ACK_PL)
 
@@ -158,8 +161,8 @@ void runRadio(void)
 
     // Configure RX PIPE
     static const uint8_t nRF24_ADDR[] = {'L', 'I', 'S', 'Z', 'T'};
-    nRF24_SetAddr(nRF24_PIPE1, nRF24_ADDR);        // program address for pipe
-    nRF24_SetRXPipe(nRF24_PIPE1, nRF24_AA_ON, 4); // Auto-ACK: enabled, payload length: 10 bytes
+    nRF24_SetAddr(nRF24_PIPE1, nRF24_ADDR);       // program address for pipe
+    nRF24_SetRXPipe(nRF24_PIPE1, nRF24_AA_ON, 6); // Auto-ACK: enabled, payload length: 10 bytes
 
     // Set TX power for Auto-ACK (maximum, to ensure that transmitter will hear ACK reply)
     nRF24_SetTXPower(nRF24_TXPWR_0dBm);
@@ -182,11 +185,10 @@ void runRadio(void)
     nRF24_CE_H();
 
     // The main loop
-//#pragma clang diagnostic push
-//#pragma clang diagnostic ignored "-Wmissing-noreturn"
-  
-//#pragma clang diagnostic pop
+    //#pragma clang diagnostic push
+    //#pragma clang diagnostic ignored "-Wmissing-noreturn"
+
+    //#pragma clang diagnostic pop
 
 #endif // DEMO_RX_SINGLE_ESB
-		
 }

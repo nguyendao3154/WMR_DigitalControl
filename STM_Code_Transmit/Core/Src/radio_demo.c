@@ -212,7 +212,7 @@ void transmitRF(void)
 	}
 	payload_length = sizeof(nRF24_payload);
 	// Print a payload
-	if (transmit_buffer[0] == 0xbd && transmit_buffer[5] == 0xed)
+	if ((nRF24_payload[0] == 0xbd) && (nRF24_payload[5] == 0xed))
 	{
 		UART_SendStr("Sent: ");
 		UART_SendBufHex((char *)nRF24_payload, payload_length);

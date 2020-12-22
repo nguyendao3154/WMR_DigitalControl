@@ -69,7 +69,7 @@ uint16_t tick_10ms = 0;
 
 bool timer2_flag = false;
 
-extern uint8_t nRF24_payload[4];
+extern uint8_t nRF24_payload[6];
 /*
  * Byte 0: x decimal
  * 			1: x fraction
@@ -322,8 +322,8 @@ void PID_ConvertPositionRF(void)
 	y_fb_old = y_fb;
 
 	//getting new feedback position from nrf_payload
-	x_fb = (float)nRF24_payload[0];
-	y_fb = (float)nRF24_payload[1];
+	x_fb = (float)nRF24_payload[1];
+	y_fb = (float)nRF24_payload[2];
 	//calculate phi_fb
 
 	phi_fb = atan2(y_fb - y_fb_old, x_fb - x_fb_old);
@@ -397,7 +397,7 @@ void task_100ms(void)
 		if (tick_10ms >= 10)
 		{
 			//UART_SendStr("in timer ");
-			//radio_receive();
+			radio_receive();
 			//PID_InnerLoopTask();
 			PID_ConvertPositionRF();
 			tick_10ms = 0;
