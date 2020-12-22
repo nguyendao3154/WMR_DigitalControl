@@ -42,6 +42,8 @@
 /* USER CODE BEGIN PD */
 #define ENCODER_PPR 20
 #define PID_INNER_COUNT 10
+#define TIMER_LEFT &htim4
+#define TIMER_RIGHT	&htim3
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -96,6 +98,14 @@ uint8_t left_duty, right_duty;
 
 uint8_t inner_loop_count = 0;
 
+/*
+	Variables for testing purpose
+*/
+
+uint8_t uart_send[13];
+uint8_t temp;
+uint8_t count = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -103,7 +113,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void PWM_ChangeDuty(TIM_HandleTypeDef *htim, uint8_t duty); //only used for TIM3 and TIM4 to control motor
 
-void doc_encoder(void);
+//void doc_encoder(void);
 void WheelRotationCalculate(void);
 void task_100ms(void);
 void PID_InnerLoopTask(void);
@@ -152,6 +162,8 @@ int main(void)
 	/* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim1);
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);	
 
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
@@ -159,19 +171,67 @@ int main(void)
 
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOB, LEFT_2_Pin | RIGHT_2_Pin, GPIO_PIN_RESET);
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+	//HAL_Delay(1000);
 	runRadio();
-
+	
+	/*
+	//test
+	uart_send[4] = '\r';
+	uart_send[5] = '\n';	
+	uart_send[10] = '\r';
+	uart_send[11] = '\n';
+	uart_send[12] = 'e';
+	*/
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 	while (1)
 	{
+		/***************** Main Program ********************/
+		
+		
 		//check position, calculate feedback value
 		task_100ms();
 		PID_OutterLoopTask();
+		PID_InnerLoopTask();
+		PWM_ChangeDuty(TIMER_RIGHT, right_duty);
+		PWM_ChangeDuty(TIMER_LEFT, left_duty);
+		//PWM_ChangeDuty(&htim3, 50);
+		//PWM_ChangeDuty(&htim4, 50);
+		
+		/***************** End Main Prg ********************/
+		
+		
+		/***************** Test Program ********************/
+		/*
+		// Measure speed of motor
+		if(htim2_check == 1) {
+			WheelRotationCalculate();
+			uart_send[0] = (uint8_t)right_speed/10 + 48;
+			uart_send[1] = (uint8_t)right_speed%10 + 48;
+			temp = (uint8_t)((right_speed - (uint8_t)right_speed)*100);
+			uart_send[2] = temp/10 + 48;
+			uart_send[3] = temp%10 + 48;
+		
+			uart_send[6] = (uint8_t)left_speed/10 + 48;
+			uart_send[7] = (uint8_t)left_speed%10 + 48;
+			temp = (uint8_t)((left_speed - (uint8_t)left_speed)*100);
+			uart_send[8] = temp/10 + 48;
+			uart_send[9] = temp%10 + 48;
+			
+			count++;
+			if(count == 10) {
+				count = 0;
+				HAL_UART_Transmit(&huart2, (uint8_t*)uart_send, 13, HAL_MAX_DELAY);
+			}
+			
+		}
+		task_100ms();
+		PWM_ChangeDuty(&htim3, 99);
+		PWM_ChangeDuty(&htim4, 99); 
+		*/
+		/***************** End Test Prg ********************/
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
@@ -217,6 +277,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == GPIO_PIN_3)
@@ -250,6 +311,7 @@ void PID_OutterLoopTask(void)
 		PID_KinematicControl(x_fb, y_fb, phi_fb, &v_ref, &w_ref);
 		PID_DynamicInverse(v_ref, w_ref, v_measure, w_measure, &left_torque, &right_torque);
 		inner_loop_count = 0;
+		//PID_InnerLoopTask();
 	}
 }
 
@@ -260,8 +322,8 @@ void PID_ConvertPositionRF(void)
 	y_fb_old = y_fb;
 
 	//getting new feedback position from nrf_payload
-	x_fb = (float)nRF24_payload[0] + nRF24_payload[1] * 0.01;
-	y_fb = (float)nRF24_payload[2] + nRF24_payload[3] * 0.01;
+	x_fb = (float)nRF24_payload[0];
+	y_fb = (float)nRF24_payload[1];
 	//calculate phi_fb
 
 	phi_fb = atan2(y_fb - y_fb_old, x_fb - x_fb_old);
@@ -278,8 +340,10 @@ void PID_InnerLoopTask(void)
 	PID_Compensator(v_ref, w_ref, v_measure, w_measure, &v_error, &w_error, &delta_r, &delta_l);
 	PID_OutputDynamicControl(right_torque, left_torque, delta_r, delta_l, &right_torque, &left_torque);
 	PID_DynamicModel(right_torque, left_torque, v_measure, w_measure, &left_duty, &right_duty);
-	PWM_ChangeDuty(&htim3, left_duty);
-	PWM_ChangeDuty(&htim4, right_duty);
+	//PWM_ChangeDuty(&htim3, left_duty);
+	//PWM_ChangeDuty(&htim4, right_duty);
+	PWM_ChangeDuty(&htim3, 50);
+	
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 { //measure pulse of encoder timeout
@@ -291,7 +355,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		//htim2.Instance->CNT = 0x00;					//set counter = 0 to restart
 		//measure in 10ms
 		htim2_check = 1;
-		new_measure = 1;
+		//new_measure = 1;
 		tick_10ms++;
 	}
 
@@ -305,11 +369,25 @@ void WheelRotationCalculate(void)
 {
 	if (htim2_check == 1)
 	{
-		right_speed = (float)right_wheel_count * 5 * PI; //(count/ (time * PPR)) *2 PI(rad/s) = (count / (0.01*20)) *2PI
-		left_speed = (float)left_wheel_count * 5 * PI;
+		//Turn off interrupt
+		HAL_TIM_Base_Stop_IT(&htim2);
+		HAL_NVIC_DisableIRQ(EXTI3_IRQn);
+		HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+		
+		uint16_t right_temp = right_wheel_count;
+		uint16_t left_temp = left_wheel_count;
 		right_wheel_count = 0;
 		left_wheel_count = 0;
+		
+		right_speed = (float)right_temp * 5 * PI; //(count/ (time * PPR)) *2 PI(rad/s) = (count / (0.01*20)) *2PI
+		left_speed = (float)left_temp * 5 * PI;
+
 		htim2_check = 0;
+		
+		//enable interrupt
+		HAL_NVIC_EnableIRQ(EXTI3_IRQn);
+		HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+		HAL_TIM_Base_Start_IT(&htim2);
 	}
 }
 void task_100ms(void)
@@ -319,8 +397,8 @@ void task_100ms(void)
 		if (tick_10ms >= 10)
 		{
 			//UART_SendStr("in timer ");
-			radio_receive();
-			PID_InnerLoopTask();
+			//radio_receive();
+			//PID_InnerLoopTask();
 			PID_ConvertPositionRF();
 			tick_10ms = 0;
 		}

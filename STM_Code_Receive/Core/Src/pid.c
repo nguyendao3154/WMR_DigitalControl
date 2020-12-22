@@ -26,7 +26,9 @@ void PID_KinematicControl(float x_fb, float y_fb, float phi_fb, float* v_out, fl
 	Note: g_systick (ms) => divide by 1000 to get sec
 	*/
 	float time = (float) g_systick/1000;				
-	/*******************************/
+	/**************Trajectory number 8***************/
+	
+	/*
 	float xRef = 0.5 + 0.4*sin(FREQ*time);
 	float dxRef = FREQ*0.4*cos(FREQ*time);
   float ddxRef = (-1)*FREQ*FREQ*0.4*sin(FREQ*time);
@@ -35,6 +37,25 @@ void PID_KinematicControl(float x_fb, float y_fb, float phi_fb, float* v_out, fl
   float ddyRef = -4*FREQ*FREQ*0.4*sin(2*FREQ*time);
   float vRef = sqrt(dxRef*dxRef + dyRef*dyRef);
   float wRef = (dxRef*ddyRef - dyRef*ddxRef) / (dxRef*dxRef + dyRef*dyRef);
+	*/
+	
+	/************************************************/
+	
+	/*************Trajectory Straight Line****************/
+	
+	float xRef = 0.4 + time/60;
+	float yRef = 0.4 + 0.5*time/60;
+	
+	float dxRef = 1/60;
+	float dyRef = 0.5/60;
+	
+	float ddxRef = 0;
+	float ddyRef = 0;
+	
+  float vRef = sqrt(dxRef*dxRef + dyRef*dyRef);
+  float wRef = (dxRef*ddyRef - dyRef*ddxRef) / (dxRef*dxRef + dyRef*dyRef);
+	
+	/*****************************************************/
 	
 	float ex = xRef - x_fb;
 	float ey = yRef - y_fb;
@@ -126,6 +147,6 @@ void PID_DynamicModel(float right_torque, float left_torque, float v_measure, fl
 	float w_left = v_measure/W_RADIUS - (LENGTH*w_measure)/(2*W_RADIUS);
 	float w_right = v_measure/W_RADIUS + (LENGTH*w_measure)/(2*W_RADIUS);
 	
-	*left_pwm_duty = (uint8_t)w_left/MOTOR_MAX_SPEED*100;				//SET to range 0 - 100
-	*right_pwm_duty = (uint8_t)w_right/MOTOR_MAX_SPEED*100;
+	*left_pwm_duty = (uint8_t)w_left/MOTOR_MAX_SPEED*50;				//SET to range 0 - 100
+	*right_pwm_duty = (uint8_t)w_right/MOTOR_MAX_SPEED*50;
 }

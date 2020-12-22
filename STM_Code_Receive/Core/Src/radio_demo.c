@@ -1,6 +1,7 @@
 
 #include "support.h"
 #include "nrf24.h"
+#include <string.h>
 //
 // Created by ilia.motornyi on 13-Dec-18.
 //
@@ -8,7 +9,7 @@
 
 #define HEX_CHARS "0123456789ABCDEF"
 
-uint8_t nRF24_payload[4];
+uint8_t nRF24_payload[2];
 
 // Pipe number
 nRF24_RXResult pipe;
@@ -109,7 +110,7 @@ void radio_receive(void)
 #endif
 
 
-int runRadio(void)
+void runRadio(void)
 {
     UART_SendStr("\r\nSTM32F303RE is online.\r\n");
 
@@ -181,10 +182,10 @@ int runRadio(void)
     nRF24_CE_H();
 
     // The main loop
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
+//#pragma clang diagnostic push
+//#pragma clang diagnostic ignored "-Wmissing-noreturn"
   
-#pragma clang diagnostic pop
+//#pragma clang diagnostic pop
 
 #endif // DEMO_RX_SINGLE_ESB
 		
