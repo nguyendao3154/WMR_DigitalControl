@@ -51,6 +51,8 @@
 /* USER CODE BEGIN PV */
 uint8_t position_buffer[4];
 uint8_t receive_buffer[4];
+uint8_t transmit_buffer[6];
+
 /*
  * Byte 0: x decimal
  * 		1: x fraction
@@ -58,8 +60,8 @@ uint8_t receive_buffer[4];
  * 		3: y fraction
  */
 
-float x_pos, y_pos;											//feedback position from RF
-uint16_t right_wheel_count = 0, left_wheel_count = 0;		//use to count encoder of 2 wheels
+float x_pos, y_pos;                                   //feedback position from RF
+uint16_t right_wheel_count = 0, left_wheel_count = 0; //use to count encoder of 2 wheels
 float right_speed, left_speed;
 uint16_t count_tick = 0;
 
@@ -70,8 +72,9 @@ bool timer2_flag = false;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-void PWM_ChangeDuty(TIM_HandleTypeDef* htim, uint8_t duty);			//only used for TIM3 and TIM4 to control motor
+void PWM_ChangeDuty(TIM_HandleTypeDef *htim, uint8_t duty); //only used for TIM3 and TIM4 to control motor
 void task_100ms(void);
+void packing_packet(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -115,16 +118,16 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Receive_IT(&huart2, receive_buffer, sizeof(receive_buffer));
-	HAL_TIM_Base_Start_IT(&htim2);
-	runRadio();
+  HAL_TIM_Base_Start_IT(&htim2);
+  runRadio();
   /* USER CODE END 2 */
 
-  /* Infinite loop */ 
+  /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  //uint8_t data = 'a';
-		task_100ms();
+    //uint8_t data = 'a';
+    task_100ms();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -157,8 +160,7 @@ void SystemClock_Config(void)
   }
   /** Initializes the CPU, AHB and APB buses clocks
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -173,47 +175,60 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-  if(huart->Instance == huart2.Instance)
+  if (huart->Instance == huart2.Instance)
   {
     HAL_UART_Receive_IT(&huart2, receive_buffer, sizeof(receive_buffer));
-//    UART_SendBufHex((char*)receive_buffer, sizeof(receive_buffer));
+    //    UART_SendBufHex((char*)receive_buffer, sizeof(receive_buffer));
   }
 }
 
 void task_100ms(void)
 {
-	if(timer2_flag)
-	{
-		if(count_tick >= 10)
-		{
-			//UART_SendStr("in timer ");
-			transmitRF();
-			count_tick = 0;
-		}
-	}
-	timer2_flag = false;
+  if (timer2_flag)
+  {
+    if (count_tick >= 10)
+    {
+      //UART_SendStr("in timer ");
+      packing_packet();
+      transmitRF();
+      count_tick = 0;
+    }
+  }
+  timer2_flag = false;
 }
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-
+void packing_packet(void)
+{
+  transmit_buffer[0] = 0xbd;
+  transmit_buffer[1] = receive_buffer[0];
+  transmit_buffer[2] = receive_buffer[1];
+  transmit_buffer[3] = receive_buffer[2];
+  transmit_buffer[4] = receive_buffer[3];
+  transmit_buffer[5] = 0xed;
 }
 
-void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {				//finish reading data from RX FIFO NRF
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
 }
 
-void PWM_ChangeDuty(TIM_HandleTypeDef* htim, uint8_t duty) {
-	__HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1,duty);
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
+{ //finish reading data from RX FIFO NRF
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {		//measure pulse of encoder timeout
-	if(htim->Instance == TIM2) 
-		{
-		
-		timer2_flag = true;
-		//htim2.Instance->CNT = 0x00;					//set counter = 0 to restart
-		count_tick++;
-	}
+void PWM_ChangeDuty(TIM_HandleTypeDef *htim, uint8_t duty)
+{
+  __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1, duty);
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{ //measure pulse of encoder timeout
+  if (htim->Instance == TIM2)
+  {
+
+    timer2_flag = true;
+    //htim2.Instance->CNT = 0x00;					//set counter = 0 to restart
+    count_tick++;
+  }
 }
 /* USER CODE END 4 */
 
@@ -229,7 +244,7 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
