@@ -85,8 +85,8 @@ void radio_receive(void)
 
         // Clear all pending IRQ flags
         nRF24_ClearIRQFlags();
-        UART_SendBufHex((char *)nRF24_payload, sizeof(nRF24_payload));
-        UART_SendStr("\r\n");
+        //UART_SendBufHex((char *)nRF24_payload, sizeof(nRF24_payload));
+        //  3            xx                                                                                         +++                                                                                                                                             UART_SendStr("\r\n");
         if ((nRF24_payload[0] == 0xbd) && (nRF24_payload[5] == 0xed))
         {
             // Print a payload contents to UART
