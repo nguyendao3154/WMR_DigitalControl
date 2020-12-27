@@ -447,6 +447,11 @@
               <FileType>1</FileType>
               <FilePath>..\Core\Src\systick.c</FilePath>
             </File>
+            <File>
+              <FileName>app_uart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\app_uart.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
