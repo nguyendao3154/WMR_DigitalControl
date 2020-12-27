@@ -3,7 +3,7 @@
 
 #include "support.h"
 #include <string.h>
-#include "stdbool.h"
+#include <stdbool.h>
 
 #define START_BYTE 0xBD
 #define STOP_BYTE 0xED
