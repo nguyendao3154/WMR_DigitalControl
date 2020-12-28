@@ -29,7 +29,7 @@ void radio_receive(void)
     // This is far from best solution, but it's ok for testing purposes
     // More smart way is to use the IRQ pin :)
     //
-    UART_SendStr("in radio: ");
+    //UART_SendStr("in radio: ");
     if (nRF24_GetStatus_RXFIFO() != nRF24_STATUS_RXFIFO_EMPTY)
     {
         // Get a payload from the transceiver

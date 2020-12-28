@@ -24,6 +24,7 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+#include "app_uart.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -50,9 +51,11 @@
 
 /* USER CODE BEGIN PV */
 uint8_t position_buffer[4];
-uint8_t receive_buffer[4];
-uint8_t transmit_buffer[6];
-
+uint8_t receive_buffer;
+uint8_t temp_buffer[6] = {0xbd, 0x00, 0x00, 0x00, 0x00, 0xed};
+extern uint8_t nRF24_payload[6];
+bool uart_receive_command = false;
+uint8_t buffer_index = 0;
 /*
  * Byte 0: x decimal
  * 		1: x fraction
@@ -117,7 +120,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UART_Receive_IT(&huart2, receive_buffer, sizeof(receive_buffer));
+  HAL_UART_Receive_IT(&huart2, (uint8_t *)&receive_buffer, sizeof(temp_buffer) / 6);
   HAL_TIM_Base_Start_IT(&htim2);
   runRadio();
   /* USER CODE END 2 */
@@ -177,8 +180,30 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   if (huart->Instance == huart2.Instance)
   {
-    HAL_UART_Receive_IT(&huart2, receive_buffer, sizeof(receive_buffer));
-    //    UART_SendBufHex((char*)receive_buffer, sizeof(receive_buffer));
+    // HAL_UART_Receive_IT(&huart2, receive_buffer, sizeof(receive_buffer));
+    // UART_SendStr("in UART");
+    HAL_UART_Receive_IT(&huart2, (uint8_t *)&receive_buffer, sizeof(temp_buffer) / 6);
+    if (*(&receive_buffer) == START_BYTE)
+    {
+      buffer_index = 0;
+      uart_receive_command = true;
+      UART_SendStr("received BD\n");
+			temp_buffer[5] = 0x00;
+    }
+    if (uart_receive_command)
+    {
+      temp_buffer[buffer_index] = receive_buffer;
+      UART_SendStr("uart_receive_command = 1 \n");
+      buffer_index++;
+    }
+    if ((buffer_index == 6) && (temp_buffer[5] == STOP_BYTE))
+    {
+      temp_buffer[buffer_index] = *(&receive_buffer);
+      UART_SendStr("received ED \n");
+      buffer_index = 0;
+      uart_receive_command = false;
+    }
+    //  UART_SendBufHex((char*)receive_buffer, sizeof(receive_buffer));
   }
 }
 
@@ -191,6 +216,10 @@ void task_100ms(void)
       //UART_SendStr("in timer ");
       packing_packet();
       transmitRF();
+      //UART_SendBufHex((char *)&temp_buffer, sizeof(temp_buffer));
+      //UART_SendStr("\n");
+      //UART_SendHex8(buffer_index);
+      //UART_SendStr("\n");
       count_tick = 0;
     }
   }
@@ -199,12 +228,13 @@ void task_100ms(void)
 
 void packing_packet(void)
 {
-  transmit_buffer[0] = 0xbd;
-  transmit_buffer[1] = receive_buffer[0];
-  transmit_buffer[2] = receive_buffer[1];
-  transmit_buffer[3] = receive_buffer[2];
-  transmit_buffer[4] = receive_buffer[3];
-  transmit_buffer[5] = 0xed;
+  if (UART_CheckPackage(temp_buffer))
+  {
+    for (int i = 0; i < MAX_BYTE; i++)
+    {
+      nRF24_payload[i] = temp_buffer[i];
+    }
+  }
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)

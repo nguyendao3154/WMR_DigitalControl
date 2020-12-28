@@ -1,5 +1,6 @@
 #include "support.h"
 #include "nrf24.h"
+#include "app_uart.h"
 //
 // Created by ilia.motornyi on 13-Dec-18.
 //
