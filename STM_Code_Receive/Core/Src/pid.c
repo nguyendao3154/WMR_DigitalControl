@@ -23,9 +23,9 @@ float PID_MeasureRotation(float left, float right) {
 void PID_KinematicControl(float x_fb, float y_fb, float phi_fb, float* v_out, float* w_out) {
 	/*******************************/
 	/*
-	Note: g_systick (ms) => divide by 1000 to get sec
+	Note: g_systick (* 100ms) => divide by 10 to get sec
 	*/
-	float time = (float) g_systick/1000;				
+	float time = (float) (UserSysTick_GetTick()/10.0);				
 	/**************Trajectory number 8***************/
 	
 	/*
@@ -46,7 +46,7 @@ void PID_KinematicControl(float x_fb, float y_fb, float phi_fb, float* v_out, fl
 	float xRef = 0.4 + time/60;
 	float yRef = 0.4 + 0.5*time/60;
 	
-	float dxRef = 1/60;
+	float dxRef = 1.0/60;
 	float dyRef = 0.5/60;
 	
 	float ddxRef = 0;

@@ -45,6 +45,7 @@
 #define PID_INNER_COUNT 10
 #define TIMER_LEFT &htim4
 #define TIMER_RIGHT	&htim3
+#define EXTI_INT_ON 0x18
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -132,35 +133,35 @@ void PID_OutterLoopTask(void);
   */
 int main(void)
 {
-	/* USER CODE BEGIN 1 */
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-	/* MCU Configuration--------------------------------------------------------*/
+  /* MCU Configuration--------------------------------------------------------*/
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
+  /* USER CODE BEGIN SysInit */
 
-	/* USER CODE END SysInit */
+  /* USER CODE END SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_SPI1_Init();
-	MX_TIM2_Init();
-	MX_TIM3_Init();
-	MX_TIM4_Init();
-	MX_USART2_UART_Init();
-	MX_TIM1_Init();
-	/* USER CODE BEGIN 2 */
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_SPI1_Init();
+  MX_TIM2_Init();
+  MX_TIM3_Init();
+  MX_TIM4_Init();
+  MX_USART2_UART_Init();
+  MX_TIM1_Init();
+  /* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim1);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
@@ -172,7 +173,9 @@ int main(void)
 
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOB, LEFT_2_Pin | RIGHT_2_Pin, GPIO_PIN_RESET);
-	//HAL_Delay(1000);
+	HAL_TIM_Base_Start_IT(&htim2);
+	HAL_TIM_Base_Start_IT(&htim1);
+	HAL_Delay(1000);
 	runRadio();
 	
 	/*
@@ -183,14 +186,13 @@ int main(void)
 	uart_send[11] = '\n';
 	uart_send[12] = 'e';
 	*/
-	/* USER CODE END 2 */
+  /* USER CODE END 2 */
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 	while (1)
 	{
 		/***************** Main Program ********************/
-		
 		
 		//check position, calculate feedback value
 		task_100ms();
@@ -198,9 +200,16 @@ int main(void)
 		PID_InnerLoopTask();
 		PWM_ChangeDuty(TIMER_RIGHT, right_duty);
 		PWM_ChangeDuty(TIMER_LEFT, left_duty);
-		//PWM_ChangeDuty(&htim3, 50);
-		//PWM_ChangeDuty(&htim4, 50);
 		
+		//Note: changing duty to 100ms
+		//Note2: duty cycle = 30% => run 150rpm
+		
+		//Note3: duty = 99% => run 240 - 339rpm
+		/*
+		PWM_ChangeDuty(&htim3, 99);
+		PWM_ChangeDuty(&htim4, 99);
+		WheelRotationCalculate();
+		*/
 		/***************** End Main Prg ********************/
 		
 		
@@ -228,16 +237,15 @@ int main(void)
 			}
 			
 		}
-		task_100ms();
-		PWM_ChangeDuty(&htim3, 99);
-		PWM_ChangeDuty(&htim4, 99); 
-		*/
+		PWM_ChangeDuty(&htim3, 30);
+		PWM_ChangeDuty(&htim4, 30); 
+		*/ 
 		/***************** End Test Prg ********************/
-		/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-		/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
 
 /**
@@ -246,35 +254,36 @@ int main(void)
   */
 void SystemClock_Config(void)
 {
-	RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-	RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-	/** Initializes the RCC Oscillators according to the specified parameters
+  /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-	RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-	RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
-	RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-	RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL5;
-	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-	{
-		Error_Handler();
-	}
-	/** Initializes the CPU, AHB and APB buses clocks
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL5;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Initializes the CPU, AHB and APB buses clocks
   */
-	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
-	{
-		Error_Handler();
-	}
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /* USER CODE BEGIN 4 */
@@ -306,8 +315,8 @@ void PID_OutterLoopTask(void)
 		v_measure = PID_MeasureVelocity(left_speed, right_speed);
 		w_measure = PID_MeasureRotation(left_speed, right_speed);
 
-		v_error = 0;
-		w_error = 0; //used for Compensator
+		//v_error = 0;
+		//w_error = 0; //used for Compensator
 		//motor control:
 		PID_KinematicControl(x_fb, y_fb, phi_fb, &v_ref, &w_ref);
 		PID_DynamicInverse(v_ref, w_ref, v_measure, w_measure, &left_torque, &right_torque);
@@ -343,7 +352,7 @@ void PID_InnerLoopTask(void)
 	PID_DynamicModel(right_torque, left_torque, v_measure, w_measure, &left_duty, &right_duty);
 	//PWM_ChangeDuty(&htim3, left_duty);
 	//PWM_ChangeDuty(&htim4, right_duty);
-	PWM_ChangeDuty(&htim3, 50);
+	//PWM_ChangeDuty(&htim3, 50);
 	
 }
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -360,10 +369,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		tick_10ms++;
 	}
 
-	if (htim->Instance == TIM1)
-	{
-		g_systick++;
-	}
+	//if (htim->Instance == TIM1)
+	//{
+	//	g_systick++;
+	//}
 }
 
 void WheelRotationCalculate(void)
@@ -372,23 +381,37 @@ void WheelRotationCalculate(void)
 	{
 		//Turn off interrupt
 		HAL_TIM_Base_Stop_IT(&htim2);
-		HAL_NVIC_DisableIRQ(EXTI3_IRQn);
-		HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+		//HAL_NVIC_DisableIRQ(EXTI3_IRQn);
+		//HAL_NVIC_DisableIRQ(EXTI4_IRQn);
+		//_disable_irq();
+		EXTI->IMR  &= ~(EXTI_INT_ON);		
+		/*
+		uint8_t dat[5];
+		dat[0] = right_wheel_count >> 8;
+		dat[1] = right_wheel_count & 0xFF;
 		
-		uint16_t right_temp = right_wheel_count;
-		uint16_t left_temp = left_wheel_count;
+		dat[2] = left_wheel_count >> 8;
+		dat[3] = left_wheel_count &  0xFF;
+		dat[4] = 0xAA;
+		*/
+		//HAL_UART_Transmit(&huart2, (uint8_t*)&dat, 5, HAL_MAX_DELAY);
+		//HAL_UART_Transmit(&huart2, (uint8_t*)&right_temp, 2, HAL_MAX_DELAY);
+		//HAL_UART_Transmit(&huart2, (uint8_t*)&left_temp, 2, HAL_MAX_DELAY);
+		//HAL_UART_Transmit(&huart2, (uint8_t*) 0xAA, 1, HAL_MAX_DELAY);
+		
+		right_speed = (float)right_wheel_count * PI; //(count/ (time * PPR)) *2 PI(rad/s) 
+		left_speed = (float)left_wheel_count * PI;
+		
 		right_wheel_count = 0;
 		left_wheel_count = 0;
 		
-		right_speed = (float)right_temp * 5 * PI; //(count/ (time * PPR)) *2 PI(rad/s) = (count / (0.01*20)) *2PI
-		left_speed = (float)left_temp * 5 * PI;
-
 		htim2_check = 0;
 		
 		//enable interrupt
-		HAL_NVIC_EnableIRQ(EXTI3_IRQn);
-		HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+		//HAL_NVIC_EnableIRQ(EXTI3_IRQn);
+		//HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 		HAL_TIM_Base_Start_IT(&htim2);
+		EXTI->IMR |= EXTI_INT_ON;
 	}
 }
 void task_100ms(void)
@@ -414,13 +437,13 @@ void task_100ms(void)
   */
 void Error_Handler(void)
 {
-	/* USER CODE BEGIN Error_Handler_Debug */
+  /* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
 
-	/* USER CODE END Error_Handler_Debug */
+  /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef USE_FULL_ASSERT
+#ifdef  USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
@@ -430,10 +453,10 @@ void Error_Handler(void)
   */
 void assert_failed(uint8_t *file, uint32_t line)
 {
-	/* USER CODE BEGIN 6 */
+  /* USER CODE BEGIN 6 */
 	/* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-	/* USER CODE END 6 */
+  /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
 
