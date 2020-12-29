@@ -1,5 +1,6 @@
 #include "systick.h"
 
+//100ms => increase 1 count
 
 void UserSysTick_Start() {
 	HAL_TIM_Base_Start_IT(&htim1);
