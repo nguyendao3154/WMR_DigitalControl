@@ -32,13 +32,15 @@
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN Private defines */
-
+#define BACKWARD_DIRECTION GPIO_PIN_SET
+#define FORWARD_DIRECTION GPIO_PIN_RESET
 /* USER CODE END Private defines */
 
 void MX_GPIO_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+void GPIO_LeftWheelTurn(uint8_t dir);
+void GPIO_RightWheelTurn(uint8_t dir);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

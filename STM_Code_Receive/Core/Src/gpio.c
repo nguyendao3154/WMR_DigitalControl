@@ -91,7 +91,13 @@ void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 2 */
+void GPIO_LeftWheelTurn(uint8_t dir) {
+	HAL_GPIO_WritePin(GPIOB, LEFT_2_Pin, dir);
+}
 
+void GPIO_RightWheelTurn(uint8_t dir) {
+	HAL_GPIO_WritePin(GPIOB, RIGHT_2_Pin, dir);
+}
 /* USER CODE END 2 */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

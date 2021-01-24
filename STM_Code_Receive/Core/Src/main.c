@@ -23,7 +23,6 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
-#include "app_uart.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -41,11 +40,17 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define ENCODER_PPR 20
+#define ENCODER_PPR 334
 #define PID_INNER_COUNT 10
 #define TIMER_LEFT &htim4
 #define TIMER_RIGHT	&htim3
 #define EXTI_INT_ON 0x18
+#define PWM_COUNTER	10000
+#define LEFT_WHEEL 0
+#define RIGHT_WHEEL 1
+
+/*******Start Reload for Motor to run********/
+#define MIN_PWM_CNT 3000
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -57,20 +62,37 @@
 
 /* USER CODE BEGIN PV */
 
-float x_pos, y_pos; //feedback position from RF
-float right_speed, left_speed;
+/*********Position Feedback Variables***********/
+float x_fb_old;
+float y_fb_old;
+float x_fb;
+float y_fb;
+float phi_fb;
+/***********************************************/
+
+/*********Speed Feedback Variables**************/
+float measured_right_speed, measured_left_speed;
+uint32_t right_wheel_count = 0, left_wheel_count = 0; //use to count encoder of 2 wheels
+float v_measure;
+float w_measure;
+
+//Duty cycle for pwm
+float left_duty, right_duty;
+/***********************************************/
+
+/*********Interrupt Variables*******************/
 bool htim2_check = 0;
-
-uint32_t g_systick = 0;
-
+bool timer2_flag = false;
+uint16_t tick_10ms = 0;
 bool new_measure = 0;
 bool new_pos_measure = 0;
+/***********************************************/
 
-uint16_t right_wheel_count = 0, left_wheel_count = 0; //use to count encoder of 2 wheels
-uint16_t tick_10ms = 0; 	
+/*********Time Variables************/
+uint32_t g_systick = 0;
+/***********************************/
 
-bool timer2_flag = false;
-
+/**********Extern Variables**************/
 extern uint8_t nRF24_payload[6];
 /*
  * Byte 0: x decimal
@@ -78,48 +100,41 @@ extern uint8_t nRF24_payload[6];
  * 			2: y decimal
  * 			3: y fraction
  */
+/***************************************/
 
-//feedback position variables
-float x_fb_old;
-float y_fb_old;
-float x_fb;
-float y_fb;
-float phi_fb;
-
+/***********Main Calculation Variables*************/
+float x_pos, y_pos;
 //Set parameter for control motor
 float v_ref, w_ref; //output of kinematic control
-float v_measure;
-float w_measure;
+float w_right_ref, w_left_ref;		//reference rotational speed of 2 wheels inner loop
 
+
+float w_left_cal = 0, w_right_cal = 0;
 float left_torque, right_torque;
-float v_error = 0, w_error = 0;
+float left_error = 0, right_error = 0;
 
-float delta_r, delta_l; //output of compensato
+float delta_r, delta_l; //output of compensator
 
-uint8_t left_duty, right_duty;
+uint8_t inner_loop_count = PID_INNER_COUNT;
+/*************************************************/
 
-uint8_t inner_loop_count = 0;
-
-/*
-	Variables for testing purpose
-*/
-
-uint8_t uart_send[13];
-uint8_t temp;
-uint8_t count = 0;
+/*********Variables for testing purpose***********/
+//uint8_t uart_send[13];
+//uint8_t temp;
+//uint8_t count = 0;
+/*************************************************/
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-void PWM_ChangeDuty(TIM_HandleTypeDef *htim, uint8_t duty); //only used for TIM3 and TIM4 to control motor
+void PWM_ChangeDuty(TIM_HandleTypeDef *htim, float duty, uint8_t wheel); //only used for TIM3 and TIM4 to control motor
 
-//void doc_encoder(void);
 void WheelRotationCalculate(void);
 void task_100ms(void);
 void PID_InnerLoopTask(void);
-void PID_OutterLoopTask(void);	
+void PID_OutterLoopTask(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -156,16 +171,16 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_SPI1_Init();
+  MX_TIM1_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_USART2_UART_Init();
-  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim2);
 	HAL_TIM_Base_Start_IT(&htim1);
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);	
+	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
 
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
@@ -177,15 +192,7 @@ int main(void)
 	HAL_TIM_Base_Start_IT(&htim1);
 	HAL_Delay(1000);
 	runRadio();
-	
-	/*
-	//test
-	uart_send[4] = '\r';
-	uart_send[5] = '\n';	
-	uart_send[10] = '\r';
-	uart_send[11] = '\n';
-	uart_send[12] = 'e';
-	*/
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -193,53 +200,62 @@ int main(void)
 	while (1)
 	{
 		/***************** Main Program ********************/
-		
+
 		//check position, calculate feedback value
 		task_100ms();
 		PID_OutterLoopTask();
 		PID_InnerLoopTask();
-		PWM_ChangeDuty(TIMER_RIGHT, right_duty);
-		PWM_ChangeDuty(TIMER_LEFT, left_duty);
-		
+		PWM_ChangeDuty(TIMER_RIGHT, right_duty, RIGHT_WHEEL);
+		PWM_ChangeDuty(TIMER_LEFT, left_duty, LEFT_WHEEL);
+		//__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 2990);
+		//__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 2990);
+		//WheelRotationCalculate();
 		//Note: changing duty to 100ms
 		//Note2: duty cycle = 30% => run 150rpm
-		
+
 		//Note3: duty = 99% => run 240 - 339rpm
+
 		/*
 		PWM_ChangeDuty(&htim3, 99);
 		PWM_ChangeDuty(&htim4, 99);
 		WheelRotationCalculate();
 		*/
 		/***************** End Main Prg ********************/
-		
-		
+
+
 		/***************** Test Program ********************/
 		/*
 		// Measure speed of motor
 		if(htim2_check == 1) {
 			WheelRotationCalculate();
-			uart_send[0] = (uint8_t)right_speed/10 + 48;
+			uart_send[0] = (uint8_t)measuared_right_speed/10 + 48;
 			uart_send[1] = (uint8_t)right_speed%10 + 48;
 			temp = (uint8_t)((right_speed - (uint8_t)right_speed)*100);
 			uart_send[2] = temp/10 + 48;
 			uart_send[3] = temp%10 + 48;
-		
+
 			uart_send[6] = (uint8_t)left_speed/10 + 48;
 			uart_send[7] = (uint8_t)left_speed%10 + 48;
 			temp = (uint8_t)((left_speed - (uint8_t)left_speed)*100);
 			uart_send[8] = temp/10 + 48;
 			uart_send[9] = temp%10 + 48;
-			
+
 			count++;
 			if(count == 10) {
 				count = 0;
 				HAL_UART_Transmit(&huart2, (uint8_t*)uart_send, 13, HAL_MAX_DELAY);
 			}
-			
+
 		}
+		*/
+
+		/*
+		WheelRotationCalculate();
+		//HAL_Delay(100);
+		for(uint32_t i = 0; i < 0xFFFFF; i++);
 		PWM_ChangeDuty(&htim3, 30);
-		PWM_ChangeDuty(&htim4, 30); 
-		*/ 
+		PWM_ChangeDuty(&htim4, 30);
+		*/
 		/***************** End Test Prg ********************/
     /* USER CODE END WHILE */
 
@@ -288,6 +304,7 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 
+/***********Interrupt Callback Function****************/
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == GPIO_PIN_3)
@@ -302,59 +319,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	}
 }
 
-void PWM_ChangeDuty(TIM_HandleTypeDef *htim, uint8_t duty)
-{
-	__HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1, duty);
-}
-
-void PID_OutterLoopTask(void)
-{
-	if (inner_loop_count >= PID_INNER_COUNT)
-	{
-		//Set parameter for control motor
-		v_measure = PID_MeasureVelocity(left_speed, right_speed);
-		w_measure = PID_MeasureRotation(left_speed, right_speed);
-
-		//v_error = 0;
-		//w_error = 0; //used for Compensator
-		//motor control:
-		PID_KinematicControl(x_fb, y_fb, phi_fb, &v_ref, &w_ref);
-		PID_DynamicInverse(v_ref, w_ref, v_measure, w_measure, &left_torque, &right_torque);
-		inner_loop_count = 0;
-		//PID_InnerLoopTask();
-	}
-}
-
-void PID_ConvertPositionRF(void)
-{
-	//handle data
-	x_fb_old = x_fb;
-	y_fb_old = y_fb;
-
-	//getting new feedback position from nrf_payload
-	x_fb = (float)nRF24_payload[1];
-	y_fb = (float)nRF24_payload[2];
-	//calculate phi_fb
-
-	phi_fb = atan2(y_fb - y_fb_old, x_fb - x_fb_old);
-
-	//after finishing handling data
-	new_pos_measure = 0;
-}
-void PID_InnerLoopTask(void)
-{
-	inner_loop_count++;
-	WheelRotationCalculate();
-	v_measure = PID_MeasureVelocity(left_speed, right_speed);
-	w_measure = PID_MeasureRotation(left_speed, right_speed);
-	PID_Compensator(v_ref, w_ref, v_measure, w_measure, &v_error, &w_error, &delta_r, &delta_l);
-	PID_OutputDynamicControl(right_torque, left_torque, delta_r, delta_l, &right_torque, &left_torque);
-	PID_DynamicModel(right_torque, left_torque, v_measure, w_measure, &left_duty, &right_duty);
-	//PWM_ChangeDuty(&htim3, left_duty);
-	//PWM_ChangeDuty(&htim4, right_duty);
-	//PWM_ChangeDuty(&htim3, 50);
-	
-}
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 { //measure pulse of encoder timeout
 
@@ -367,12 +331,79 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		htim2_check = 1;
 		//new_measure = 1;
 		tick_10ms++;
+		WheelRotationCalculate();
+	}
+	if(htim->Instance == TIM1) g_systick++;
+}
+
+/**************Main Calculation Function********************/
+void PWM_ChangeDuty(TIM_HandleTypeDef *htim, float duty, uint8_t wheel)
+{
+	if(wheel == LEFT_WHEEL) {
+		if(duty > 0) GPIO_LeftWheelTurn(FORWARD_DIRECTION);
+		else {
+			GPIO_LeftWheelTurn(BACKWARD_DIRECTION);
+			duty*= -1;
+			duty = 100 - duty;				//do doi dien ap => phai doi counter nguoc lai
+		}
 	}
 
-	//if (htim->Instance == TIM1)
-	//{
-	//	g_systick++;
-	//}
+	if(wheel == RIGHT_WHEEL) {
+		if(duty > 0) GPIO_RightWheelTurn(FORWARD_DIRECTION);
+		else {
+			GPIO_RightWheelTurn(BACKWARD_DIRECTION);
+			duty*= -1;
+			duty = 100 - duty;
+		}
+	}
+	//duty = duty * PWM_COUNTER /100.0;									//change duty range from 100 -> 10000
+	duty = duty*1000/100;
+	if(duty > 4999) duty = 4999;
+	__HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1, (uint16_t)(duty - 1));
+}
+
+void PID_OutterLoopTask(void)
+{
+	if (inner_loop_count >= PID_INNER_COUNT)
+	{
+		//Set parameter for control motor
+		//v_error = 0;
+		//w_error = 0; //used for Compensator
+		//motor control:
+		PID_KinematicControl(x_fb, y_fb, phi_fb, &v_ref, &w_ref);
+		v_measure = PID_MeasureVelocity(measured_left_speed, measured_right_speed);
+		w_measure = PID_MeasureRotation(measured_left_speed, measured_right_speed);
+		PID_DynamicInverse(v_ref, w_ref, v_measure, w_measure, &left_torque, &right_torque);
+		PID_ReferenceInnerLoop(v_ref, w_ref, &w_right_ref, &w_left_ref);
+		inner_loop_count = 0;
+		//PID_InnerLoopTask();
+	}
+}
+
+void PID_ConvertPositionRF(void)
+{
+	//handle data
+	x_fb_old = x_fb;
+	y_fb_old = y_fb;
+
+	//getting new feedback position from nrf_payload
+	x_fb = (float)nRF24_payload[1]/100.0;
+	y_fb = (float)nRF24_payload[3]/100.0;
+	//calculate phi_fb
+	phi_fb = atan2(y_fb - y_fb_old, x_fb - x_fb_old);
+
+	//after finishing handling data
+	new_pos_measure = 0;
+}
+void PID_InnerLoopTask(void)
+{
+	inner_loop_count++;
+	//WheelRotationCalculate();
+	v_measure = PID_MeasureVelocity(measured_left_speed, measured_right_speed);
+	w_measure = PID_MeasureRotation(measured_left_speed, measured_right_speed);
+	PID_Compensator(w_left_ref, w_right_ref, &left_error, &right_error, measured_left_speed, measured_right_speed, &left_torque, &right_torque);
+	//PID_OutputDynamicControl(right_torque, left_torque, delta_r, delta_l, &right_torque, &left_torque);
+	PID_DynamicModel(right_torque, left_torque, v_measure, w_measure, &left_duty, &right_duty);
 }
 
 void WheelRotationCalculate(void)
@@ -381,35 +412,21 @@ void WheelRotationCalculate(void)
 	{
 		//Turn off interrupt
 		HAL_TIM_Base_Stop_IT(&htim2);
-		//HAL_NVIC_DisableIRQ(EXTI3_IRQn);
-		//HAL_NVIC_DisableIRQ(EXTI4_IRQn);
-		//_disable_irq();
-		EXTI->IMR  &= ~(EXTI_INT_ON);		
-		/*
-		uint8_t dat[5];
-		dat[0] = right_wheel_count >> 8;
-		dat[1] = right_wheel_count & 0xFF;
-		
-		dat[2] = left_wheel_count >> 8;
-		dat[3] = left_wheel_count &  0xFF;
-		dat[4] = 0xAA;
-		*/
-		//HAL_UART_Transmit(&huart2, (uint8_t*)&dat, 5, HAL_MAX_DELAY);
-		//HAL_UART_Transmit(&huart2, (uint8_t*)&right_temp, 2, HAL_MAX_DELAY);
-		//HAL_UART_Transmit(&huart2, (uint8_t*)&left_temp, 2, HAL_MAX_DELAY);
-		//HAL_UART_Transmit(&huart2, (uint8_t*) 0xAA, 1, HAL_MAX_DELAY);
-		
-		right_speed = (float)right_wheel_count * PI; //(count/ (time * PPR)) *2 PI(rad/s) 
-		left_speed = (float)left_wheel_count * PI;
-		
+		EXTI->IMR  &= ~(EXTI_INT_ON);
+
+		//UART_SendInt(right_wheel_count);
+		//UART_SendChar(' ');
+		//UART_SendInt(left_wheel_count);
+		//UART_SendChar('\n');
+		measured_left_speed = ((float)left_wheel_count/(INNER_LOOP_PERIOD*ENCODER_PPR))*2*PI;
+		measured_right_speed = ((float)right_wheel_count/(INNER_LOOP_PERIOD*ENCODER_PPR))*2*PI;
+
 		right_wheel_count = 0;
 		left_wheel_count = 0;
-		
+
 		htim2_check = 0;
-		
+
 		//enable interrupt
-		//HAL_NVIC_EnableIRQ(EXTI3_IRQn);
-		//HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 		HAL_TIM_Base_Start_IT(&htim2);
 		EXTI->IMR |= EXTI_INT_ON;
 	}
